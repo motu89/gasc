@@ -102,6 +102,7 @@ export default function AdminDashboard() {
       setProcessingId(item.id);
       console.log(`Processing approval: ${action} ${item.type} ${item.id}`);
       
+      // Call the approval API
       await apiRequest('/api/admin/approvals', {
         method: 'POST',
         body: JSON.stringify({ kind: item.type, id: item.id, action }),
@@ -110,12 +111,29 @@ export default function AdminDashboard() {
       console.log(`Approval API call successful for ${item.id}`)
       toast.success(`${item.type === 'product' ? 'Product' : 'Service'} ${action}d successfully.`)
       
-      // Small delay to ensure MongoDB has updated
-      console.log('Waiting 500ms for MongoDB to update...')
-      await new Promise(resolve => setTimeout(resolve, 500))
+      // IMMEDIATELY update the UI - remove the item from pending list
+      setPendingItems(prev => {
+        const updated = prev.filter(i => i.id !== item.id);
+        console.log(`Removed ${item.id} from pending list. Remaining: ${updated.length}`);
+        return updated;
+      });
       
-      console.log('Reloading dashboard after approval...')
-      // Reload dashboard data
+      // Update the pending approvals count
+      setStats(prev => {
+        if (!prev) return prev;
+        const updated = {
+          ...prev,
+          pendingApprovals: Math.max(0, prev.pendingApprovals - 1)
+        };
+        console.log(`Updated pending approvals count: ${updated.pendingApprovals}`);
+        return updated;
+      });
+      
+      // Small delay to ensure MongoDB has updated, then reload for fresh data
+      console.log('Waiting 300ms for MongoDB to update, then reloading...')
+      await new Promise(resolve => setTimeout(resolve, 300))
+      
+      // Reload dashboard to get fresh data from server
       await loadDashboard()
       console.log('Dashboard reload complete')
     } catch (error) {
