@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db';
 import { ensureAdminUser, errorResponse } from '@/lib/server-utils';
 import { BookingModel } from '@/models/Booking';
