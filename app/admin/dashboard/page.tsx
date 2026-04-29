@@ -89,7 +89,7 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <DashboardSidebar role="admin" />
 
-      <div className="ml-0 lg:ml-64 min-h-screen p-4 sm:p-6 md:p-8">
+      <div className="ml-0 lg:ml-64 min-h-screen p-4 sm:p-6 md:p-8 pt-16 lg:pt-8">
         <div className="mb-6 sm:mb-8">
           <h1 className="mb-2 text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">Admin Dashboard</h1>
           <p className="text-sm sm:text-base text-gray-600">Review marketplace activity, user growth, and any pending items.</p>

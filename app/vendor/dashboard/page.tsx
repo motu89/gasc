@@ -121,66 +121,66 @@ export default function VendorDashboard() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <DashboardSidebar role="vendor" />
 
-      <div className="ml-64 min-h-screen p-8">
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+      <div className="ml-0 lg:ml-64 min-h-screen p-4 sm:p-6 md:p-8 pt-16 lg:pt-8">
+        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900">Vendor Dashboard</h1>
-            <p className="mt-2 text-gray-600">Manage your product listings and keep them marketplace-ready.</p>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">Vendor Dashboard</h1>
+            <p className="mt-2 text-sm sm:text-base text-gray-600">Manage your product listings and keep them marketplace-ready.</p>
           </div>
           <button
             onClick={() => {
               setEditingProduct(null)
               setShowForm((current) => !current)
             }}
-            className="flex items-center gap-2 rounded-lg bg-primary-600 px-6 py-3 text-white transition hover:bg-primary-700"
+            className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base text-white transition hover:bg-primary-700"
           >
-            <FiPlus className="h-5 w-5" />
+            <FiPlus className="h-4 w-4 sm:h-5 sm:w-5" />
             {showForm && !editingProduct ? 'Hide Form' : 'Add Product'}
           </button>
         </div>
 
-        <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-4">
-          <div className="rounded-xl bg-white p-6 shadow-md">
+        <div className="mb-6 sm:mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          <div className="rounded-xl bg-white p-4 sm:p-6 shadow-md">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Products</p>
-                <p className="text-3xl font-bold text-gray-800">{products.length}</p>
+                <p className="text-xs sm:text-sm text-gray-600">Total Products</p>
+                <p className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800">{products.length}</p>
               </div>
-              <FiPackage className="h-12 w-12 text-primary-600" />
+              <FiPackage className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-primary-600" />
             </div>
           </div>
-          <div className="rounded-xl bg-white p-6 shadow-md">
+          <div className="rounded-xl bg-white p-4 sm:p-6 shadow-md">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Active Products</p>
-                <p className="text-3xl font-bold text-green-600">{activeProducts}</p>
+                <p className="text-xs sm:text-sm text-gray-600">Active Products</p>
+                <p className="text-xl sm:text-2xl md:text-3xl font-bold text-green-600">{activeProducts}</p>
               </div>
-              <FiTrendingUp className="h-12 w-12 text-green-600" />
+              <FiTrendingUp className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-green-600" />
             </div>
           </div>
-          <div className="rounded-xl bg-white p-6 shadow-md">
+          <div className="rounded-xl bg-white p-4 sm:p-6 shadow-md">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Waiting Approval</p>
-                <p className="text-3xl font-bold text-yellow-600">{pendingProducts}</p>
+                <p className="text-xs sm:text-sm text-gray-600">Waiting Approval</p>
+                <p className="text-xl sm:text-2xl md:text-3xl font-bold text-yellow-600">{pendingProducts}</p>
               </div>
-              <FiTrendingUp className="h-12 w-12 text-yellow-500" />
+              <FiTrendingUp className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-yellow-500" />
             </div>
           </div>
-          <div className="rounded-xl bg-white p-6 shadow-md">
+          <div className="rounded-xl bg-white p-4 sm:p-6 shadow-md">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Listing Value</p>
-                <p className="text-3xl font-bold text-gray-800">{formatCurrency(totalValue)}</p>
+                <p className="text-xs sm:text-sm text-gray-600">Total Listing Value</p>
+                <p className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800">{formatCurrency(totalValue)}</p>
               </div>
-              <FiPackage className="h-12 w-12 text-blue-600" />
+              <FiPackage className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-blue-600" />
             </div>
           </div>
         </div>
 
         {(showForm || editingProduct) && (
-          <div className="mb-8 rounded-xl bg-white p-6 shadow-md">
-            <h2 className="mb-4 text-2xl font-bold text-gray-900">
+          <div className="mb-6 sm:mb-8 rounded-xl bg-white p-4 sm:p-6 shadow-md">
+            <h2 className="mb-4 text-xl sm:text-2xl font-bold text-gray-900">
               {editingProduct ? 'Edit Product' : 'Add New Product'}
             </h2>
             <ProductForm
@@ -195,74 +195,74 @@ export default function VendorDashboard() {
           </div>
         )}
 
-        <div className="rounded-xl bg-white p-6 shadow-md">
-          <h2 className="mb-4 text-2xl font-bold text-gray-900">My Products</h2>
-          <div className="mb-4 rounded-xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-900">
+        <div className="rounded-xl bg-white p-4 sm:p-6 shadow-md">
+          <h2 className="mb-4 text-xl sm:text-2xl font-bold text-gray-900">My Products</h2>
+          <div className="mb-4 rounded-xl border border-yellow-200 bg-yellow-50 p-3 sm:p-4 text-xs sm:text-sm text-yellow-900">
             When you add or update a product, you have to wait for the admin approval before it shows to users.
           </div>
 
           {loading ? (
-            <div className="text-gray-600">Loading products...</div>
+            <div className="text-sm sm:text-base text-gray-600">Loading products...</div>
           ) : products.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-gray-300 p-8 text-center text-gray-600">
+            <div className="rounded-lg border border-dashed border-gray-300 p-6 sm:p-8 text-center text-sm sm:text-base text-gray-600">
               No products added yet.
             </div>
           ) : (
             <div className="space-y-4">
               {products.map((product) => (
-                <div key={product.id} className="flex flex-col gap-4 rounded-xl border border-gray-200 p-4 lg:flex-row lg:items-center">
+                <div key={product.id} className="flex flex-col gap-3 sm:gap-4 rounded-xl border border-gray-200 p-3 sm:p-4 lg:flex-row lg:items-center">
                   <MarketplaceImage
                     src={product.images[0]}
                     alt={product.title}
                     fallbackLabel={product.title}
-                    className="h-28 w-full rounded-lg lg:w-36"
+                    className="h-24 sm:h-28 w-full rounded-lg lg:w-36"
                   />
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-xl font-semibold text-gray-900">{product.title}</h3>
-                      <span className="rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700">
+                      <h3 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 truncate">{product.title}</h3>
+                      <span className="rounded-full bg-primary-50 px-2 sm:px-3 py-1 text-xs font-semibold text-primary-700">
                         {getProductTypeLabel(product.type)}
                       </span>
                       <span
-                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                        className={`rounded-full px-2 sm:px-3 py-1 text-xs font-semibold ${
                           product.available ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700'
                         }`}
                       >
                         {product.available ? 'Available' : 'Hidden'}
                       </span>
                       <span
-                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                        className={`rounded-full px-2 sm:px-3 py-1 text-xs font-semibold ${
                           product.approved ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                         }`}
                       >
                         {product.approved ? 'Approved' : 'Pending Approval'}
                       </span>
                     </div>
-                    <p className="mt-1 text-sm text-gray-600">
+                    <p className="mt-1 text-xs sm:text-sm text-gray-600">
                       {getProductCategoryLabel(product.category)} - {product.location}
                     </p>
-                    <p className="mt-2 text-lg font-bold text-primary-600">{formatCurrency(product.price)}</p>
+                    <p className="mt-2 text-base sm:text-lg font-bold text-primary-600">{formatCurrency(product.price)}</p>
                     {!product.approved && (
-                      <p className="mt-2 text-sm font-medium text-yellow-700">
+                      <p className="mt-2 text-xs sm:text-sm font-medium text-yellow-700">
                         This product will be visible to users after admin approval.
                       </p>
                     )}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 self-end sm:self-center">
                     <button
                       onClick={() => {
                         setEditingProduct(product)
                         setShowForm(true)
                       }}
-                      className="rounded-lg border border-blue-200 p-3 text-blue-600 transition hover:bg-blue-50"
+                      className="rounded-lg border border-blue-200 p-2 sm:p-3 text-blue-600 transition hover:bg-blue-50"
                     >
-                      <FiEdit className="h-5 w-5" />
+                      <FiEdit className="h-4 w-4 sm:h-5 sm:w-5" />
                     </button>
                     <button
                       onClick={() => handleDelete(product.id)}
-                      className="rounded-lg border border-red-200 p-3 text-red-600 transition hover:bg-red-50"
+                      className="rounded-lg border border-red-200 p-2 sm:p-3 text-red-600 transition hover:bg-red-50"
                     >
-                      <FiTrash2 className="h-5 w-5" />
+                      <FiTrash2 className="h-4 w-4 sm:h-5 sm:w-5" />
                     </button>
                   </div>
                 </div>

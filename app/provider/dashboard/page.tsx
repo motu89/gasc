@@ -124,7 +124,7 @@ export default function ProviderDashboard() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <DashboardSidebar role="service_provider" />
 
-      <div className="ml-0 lg:ml-64 min-h-screen p-4 sm:p-6 md:p-8">
+      <div className="ml-0 lg:ml-64 min-h-screen p-4 sm:p-6 md:p-8 pt-16 lg:pt-8">
         <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">Service Provider Dashboard</h1>
@@ -143,21 +143,21 @@ export default function ProviderDashboard() {
         </div>
 
         <div className="mb-6 sm:mb-8 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
-          <div className="rounded-xl bg-white p-4 sm:p-6 shadow-md">
+          <div className="rounded-xl bg-white p-3 sm:p-6 shadow-md">
             <p className="text-xs sm:text-sm text-gray-600">Total Services</p>
-            <p className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800">{services.length}</p>
+            <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-800">{services.length}</p>
           </div>
-          <div className="rounded-xl bg-white p-4 sm:p-6 shadow-md">
+          <div className="rounded-xl bg-white p-3 sm:p-6 shadow-md">
             <p className="text-xs sm:text-sm text-gray-600">Active Bookings</p>
-            <p className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-600">{activeBookings}</p>
+            <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-blue-600">{activeBookings}</p>
           </div>
-          <div className="rounded-xl bg-white p-4 sm:p-6 shadow-md">
+          <div className="rounded-xl bg-white p-3 sm:p-6 shadow-md">
             <p className="text-xs sm:text-sm text-gray-600">Waiting Approval</p>
-            <p className="text-xl sm:text-2xl md:text-3xl font-bold text-yellow-600">{pendingServices}</p>
+            <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-yellow-600">{pendingServices}</p>
           </div>
-          <div className="rounded-xl bg-white p-4 sm:p-6 shadow-md">
+          <div className="rounded-xl bg-white p-3 sm:p-6 shadow-md">
             <p className="text-xs sm:text-sm text-gray-600">Total Earnings</p>
-            <p className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800">{formatCurrency(totalEarnings)}</p>
+            <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-800">{formatCurrency(totalEarnings)}</p>
           </div>
         </div>
 
@@ -204,7 +204,7 @@ export default function ProviderDashboard() {
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate">{service.title}</h3>
+                          <h3 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 truncate">{service.title}</h3>
                           <span
                             className={`rounded-full px-2 sm:px-3 py-1 text-xs font-semibold ${
                               service.available ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700'
@@ -269,7 +269,7 @@ export default function ProviderDashboard() {
                     <div className="flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4">
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-sm sm:text-base text-gray-900 truncate">{booking.serviceTitle}</h3>
-                        <p className="text-xs sm:text-sm text-gray-600">Customer: {booking.userName}</p>
+                        <p className="text-xs sm:text-sm text-gray-600 truncate">Customer: {booking.userName}</p>
                         <p className="mt-1 text-xs sm:text-sm text-gray-600">{formatDate(booking.date)} at {booking.time}</p>
                         <p className="text-xs sm:text-sm text-gray-600">Duration: {booking.duration} hour(s)</p>
                         <p className="mt-2 text-sm sm:text-base font-bold text-primary-600">{formatCurrency(booking.totalAmount)}</p>

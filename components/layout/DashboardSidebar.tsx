@@ -1,9 +1,10 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import type { ElementType } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { FiCalendar, FiHome, FiLayout, FiLogOut, FiPackage, FiShoppingCart, FiTool } from 'react-icons/fi'
+import { FiCalendar, FiHome, FiLayout, FiLogOut, FiMenu, FiPackage, FiShoppingCart, FiTool, FiX } from 'react-icons/fi'
 import { APP_NAME } from '@/lib/constants'
 import { UserRole } from '@/types'
 import { useStore } from '@/lib/store'
@@ -22,6 +23,7 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { setUser } = useStore()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const handleLogout = () => {
     setUser(null)
@@ -59,7 +61,27 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
   const sidebarItems = getSidebarItems()
 
   return (
-    <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-gradient-to-b from-gray-900 to-gray-800 text-white shadow-2xl">
+    <>
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+        className="fixed top-4 left-4 z-50 rounded-lg bg-gray-900 p-3 text-white shadow-lg lg:hidden"
+      >
+        {mobileMenuOpen ? <FiX className="h-6 w-6" /> : <FiMenu className="h-6 w-6" />}
+      </button>
+
+      {/* Overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black bg-opacity-50 lg:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`fixed left-0 top-0 z-40 h-screen w-64 bg-gradient-to-b from-gray-900 to-gray-800 text-white shadow-2xl transition-transform duration-300 lg:translate-x-0 ${
+        mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}>
       <div className="border-b border-gray-700 p-6">
         <Link href="/" className="group flex items-center space-x-2">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 transition-transform group-hover:scale-110">
@@ -80,6 +102,7 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
             <Link
               key={item.href}
               href={item.href}
+              onClick={() => setMobileMenuOpen(false)}
               className={`group flex items-center space-x-3 rounded-xl px-4 py-3 transition-all ${
                 isActive
                   ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-lg'
@@ -103,5 +126,6 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
         </button>
       </div>
     </aside>
+    </>
   )
 }
