@@ -62,20 +62,26 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('POST /api/products - Starting product creation');
     await connectToDatabase();
     await ensureAdminUser();
 
     const payload = await request.json();
+    console.log('Product payload received:', JSON.stringify(payload, null, 2));
+    
     const validated = validateProductPayload(payload);
 
     if (typeof validated === 'string') {
+      console.error('Product validation failed:', validated);
       return errorResponse(validated);
     }
 
     if (!validated.vendorId || !validated.vendorName) {
+      console.error('Missing vendor information');
       return errorResponse('Vendor information is required.');
     }
 
+    console.log('Creating product in database...');
     const product = await ProductModel.create({
       title: validated.title.trim(),
       description: validated.description.trim(),
@@ -94,6 +100,7 @@ export async function POST(request: NextRequest) {
       approved: false,
     });
 
+    console.log('Product created successfully:', product._id.toString());
     return NextResponse.json({ product: serializeProduct(product) }, { status: 201 });
   } catch (error) {
     console.error('Create product error:', error);

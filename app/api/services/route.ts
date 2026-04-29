@@ -58,20 +58,26 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('POST /api/services - Starting service creation');
     await connectToDatabase();
     await ensureAdminUser();
 
     const payload = await request.json();
+    console.log('Service payload received:', JSON.stringify(payload, null, 2));
+    
     const validated = validateServicePayload(payload);
 
     if (typeof validated === 'string') {
+      console.error('Service validation failed:', validated);
       return errorResponse(validated);
     }
 
     if (!validated.providerId || !validated.providerName) {
+      console.error('Missing provider information');
       return errorResponse('Provider information is required.');
     }
 
+    console.log('Creating service in database...');
     const service = await ServiceModel.create({
       title: validated.title.trim(),
       description: validated.description.trim(),
@@ -85,6 +91,7 @@ export async function POST(request: NextRequest) {
       approved: false,
     });
 
+    console.log('Service created successfully:', service._id.toString());
     return NextResponse.json({ service: serializeService(service) }, { status: 201 });
   } catch (error) {
     console.error('Create service error:', error);

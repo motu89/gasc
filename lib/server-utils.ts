@@ -108,18 +108,25 @@ export function validateServicePayload(payload: any) {
 }
 
 export async function ensureAdminUser() {
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
-  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123456';
-  const adminName = process.env.ADMIN_NAME || 'System Admin';
+  try {
+    const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
+    const adminPassword = process.env.ADMIN_PASSWORD || 'admin123456';
+    const adminName = process.env.ADMIN_NAME || 'System Admin';
 
-  const existingAdmin = await UserModel.findOne({ email: adminEmail.toLowerCase() });
+    const existingAdmin = await UserModel.findOne({ email: adminEmail.toLowerCase() });
 
-  if (!existingAdmin) {
-    await UserModel.create({
-      name: adminName,
-      email: adminEmail.toLowerCase(),
-      passwordHash: hashPassword(adminPassword),
-      role: 'admin',
-    });
+    if (!existingAdmin) {
+      console.log('Creating default admin user...');
+      await UserModel.create({
+        name: adminName,
+        email: adminEmail.toLowerCase(),
+        passwordHash: hashPassword(adminPassword),
+        role: 'admin',
+      });
+      console.log('Default admin user created successfully');
+    }
+  } catch (error) {
+    console.error('ensureAdminUser error:', error);
+    // Don't throw - this should not block other operations
   }
 }

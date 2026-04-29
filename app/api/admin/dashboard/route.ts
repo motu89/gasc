@@ -8,9 +8,11 @@ import { UserModel } from '@/models/User';
 
 export async function GET() {
   try {
+    console.log('GET /api/admin/dashboard - Loading admin dashboard');
     await connectToDatabase();
     await ensureAdminUser();
 
+    console.log('Fetching dashboard stats...');
     const [
       totalUsers,
       totalVendors,
@@ -49,6 +51,8 @@ export async function GET() {
       BookingModel.countDocuments(),
     ]);
 
+    console.log(`Found ${pendingProducts.length} pending products and ${pendingServices.length} pending services`);
+
     const pendingItems = [
       ...pendingProducts.map((product) => ({
         id: product._id.toString(),
@@ -69,6 +73,8 @@ export async function GET() {
           service.createdAt instanceof Date ? service.createdAt.toISOString() : service.createdAt,
       })),
     ].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+    console.log(`Returning ${pendingItems.length} pending items to admin dashboard`);
 
     return NextResponse.json({
       stats: {
