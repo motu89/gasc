@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
-import { FiCheckCircle, FiPackage, FiTool, FiUsers, FiXCircle } from 'react-icons/fi'
+import { FiCheckCircle, FiPackage, FiTool, FiUsers, FiXCircle, FiRefreshCw } from 'react-icons/fi'
 import DashboardSidebar from '@/components/layout/DashboardSidebar'
 import { apiRequest } from '@/lib/api-client'
 import { formatDate } from '@/lib/format'
@@ -37,16 +37,21 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [pendingItems, setPendingItems] = useState<PendingItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [processingId, setProcessingId] = useState<string | null>(null)
 
   const loadDashboard = async () => {
     setLoading(true)
     try {
+      console.log('Loading admin dashboard data...')
       const response = await apiRequest<{ stats: AdminStats; pendingItems: PendingItem[] }>(
         '/api/admin/dashboard'
       )
+      console.log('Dashboard data received:', response)
+      console.log(`Pending items count: ${response.pendingItems.length}`)
       setStats(response.stats)
       setPendingItems(response.pendingItems)
     } catch (error) {
+      console.error('Failed to load dashboard:', error)
       toast.error(error instanceof Error ? error.message : 'Unable to load admin dashboard.')
     } finally {
       setLoading(false)
@@ -73,15 +78,28 @@ export default function AdminDashboard() {
   }
 
   const handleApproval = async (item: PendingItem, action: 'approve' | 'reject') => {
+    if (processingId) return; // Prevent double-clicking
+    
     try {
+      setProcessingId(item.id);
+      console.log(`Processing approval: ${action} ${item.type} ${item.id}`);
+      
       await apiRequest('/api/admin/approvals', {
         method: 'POST',
         body: JSON.stringify({ kind: item.type, id: item.id, action }),
       })
+      
       toast.success(`${item.type === 'product' ? 'Product' : 'Service'} ${action}d successfully.`)
+      console.log('Approval successful, reloading dashboard...')
+      
+      // Reload dashboard data
       await loadDashboard()
+      console.log('Dashboard reloaded successfully')
     } catch (error) {
+      console.error('Approval failed:', error);
       toast.error(error instanceof Error ? error.message : 'Unable to update approval.')
+    } finally {
+      setProcessingId(null);
     }
   }
 
@@ -91,8 +109,20 @@ export default function AdminDashboard() {
 
       <div className="ml-0 lg:ml-64 min-h-screen p-4 sm:p-6 md:p-8 pt-16 lg:pt-8">
         <div className="mb-6 sm:mb-8">
-          <h1 className="mb-2 text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-sm sm:text-base text-gray-600">Review marketplace activity, user growth, and any pending items.</p>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+            <div>
+              <h1 className="mb-2 text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">Admin Dashboard</h1>
+              <p className="text-sm sm:text-base text-gray-600">Review marketplace activity, user growth, and any pending items.</p>
+            </div>
+            <button
+              onClick={loadDashboard}
+              disabled={loading}
+              className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm border border-gray-300 hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <FiRefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              {loading ? 'Refreshing...' : 'Refresh'}
+            </button>
+          </div>
           <div className="mt-3 sm:mt-4 rounded-xl border border-primary-100 bg-primary-50 p-3 sm:p-4 text-xs sm:text-sm text-primary-900">
             Products and services stay hidden from users until you approve them here.
           </div>
@@ -186,15 +216,25 @@ export default function AdminDashboard() {
                             <div className="flex gap-2 sm:gap-3">
                               <button
                                 onClick={() => handleApproval(item, 'approve')}
-                                className="rounded-lg p-1.5 sm:p-2 text-green-600 transition hover:bg-green-50"
+                                disabled={processingId === item.id}
+                                className="rounded-lg p-1.5 sm:p-2 text-green-600 transition hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
-                                <FiCheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
+                                {processingId === item.id ? (
+                                  <div className="h-4 w-4 sm:h-5 sm:w-5 animate-spin rounded-full border-2 border-green-600 border-t-transparent"></div>
+                                ) : (
+                                  <FiCheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
+                                )}
                               </button>
                               <button
                                 onClick={() => handleApproval(item, 'reject')}
-                                className="rounded-lg p-1.5 sm:p-2 text-red-600 transition hover:bg-red-50"
+                                disabled={processingId === item.id}
+                                className="rounded-lg p-1.5 sm:p-2 text-red-600 transition hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
-                                <FiXCircle className="h-4 w-4 sm:h-5 sm:w-5" />
+                                {processingId === item.id ? (
+                                  <div className="h-4 w-4 sm:h-5 sm:w-5 animate-spin rounded-full border-2 border-red-600 border-t-transparent"></div>
+                                ) : (
+                                  <FiXCircle className="h-4 w-4 sm:h-5 sm:w-5" />
+                                )}
                               </button>
                             </div>
                           </td>

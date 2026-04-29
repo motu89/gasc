@@ -31,8 +31,8 @@ export async function GET() {
       UserModel.countDocuments({ role: 'service_provider' }),
       ProductModel.countDocuments(),
       ServiceModel.countDocuments(),
-      ProductModel.find({ approved: false }).sort({ createdAt: -1 }).limit(10),
-      ServiceModel.find({ approved: false }).sort({ createdAt: -1 }).limit(10),
+      ProductModel.find({ approved: false }).sort({ createdAt: -1 }).limit(10).lean(),
+      ServiceModel.find({ approved: false }).sort({ createdAt: -1 }).limit(10).lean(),
       UserModel.countDocuments({
         createdAt: {
           $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
@@ -90,6 +90,12 @@ export async function GET() {
         newServicesThisMonth: recentServices,
       },
       pendingItems,
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
     });
   } catch (error) {
     console.error('Admin dashboard error:', error);

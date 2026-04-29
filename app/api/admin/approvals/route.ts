@@ -44,7 +44,13 @@ export async function POST(request: NextRequest) {
       return errorResponse('Invalid action.');
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
+    });
   } catch (error) {
     console.error('Admin approval error:', error);
     return errorResponse('Unable to update approval right now.', 500);
