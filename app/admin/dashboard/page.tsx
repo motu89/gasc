@@ -38,22 +38,37 @@ export default function AdminDashboard() {
   const [pendingItems, setPendingItems] = useState<PendingItem[]>([])
   const [loading, setLoading] = useState(true)
   const [processingId, setProcessingId] = useState<string | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0) // Force re-render
 
   const loadDashboard = async () => {
+    console.log('loadDashboard called, setting loading to true')
     setLoading(true)
     try {
-      console.log('Loading admin dashboard data...')
+      console.log('Fetching dashboard data from API...')
       const response = await apiRequest<{ stats: AdminStats; pendingItems: PendingItem[] }>(
         '/api/admin/dashboard'
       )
       console.log('Dashboard data received:', response)
       console.log(`Pending items count: ${response.pendingItems.length}`)
+      console.log('Pending items:', response.pendingItems)
+      
+      // Clear old state first, then set new state
+      setStats(null)
+      setPendingItems([])
+      
+      // Force re-render
+      setRefreshKey(prev => prev + 1)
+      
+      // Set new data
       setStats(response.stats)
       setPendingItems(response.pendingItems)
+      
+      console.log('Dashboard state updated successfully')
     } catch (error) {
       console.error('Failed to load dashboard:', error)
       toast.error(error instanceof Error ? error.message : 'Unable to load admin dashboard.')
     } finally {
+      console.log('Setting loading to false')
       setLoading(false)
     }
   }
@@ -78,7 +93,10 @@ export default function AdminDashboard() {
   }
 
   const handleApproval = async (item: PendingItem, action: 'approve' | 'reject') => {
-    if (processingId) return; // Prevent double-clicking
+    if (processingId) {
+      console.log('Already processing another approval, ignoring click')
+      return; // Prevent double-clicking
+    }
     
     try {
       setProcessingId(item.id);
@@ -89,12 +107,17 @@ export default function AdminDashboard() {
         body: JSON.stringify({ kind: item.type, id: item.id, action }),
       })
       
+      console.log(`Approval API call successful for ${item.id}`)
       toast.success(`${item.type === 'product' ? 'Product' : 'Service'} ${action}d successfully.`)
-      console.log('Approval successful, reloading dashboard...')
       
+      // Small delay to ensure MongoDB has updated
+      console.log('Waiting 500ms for MongoDB to update...')
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      console.log('Reloading dashboard after approval...')
       // Reload dashboard data
       await loadDashboard()
-      console.log('Dashboard reloaded successfully')
+      console.log('Dashboard reload complete')
     } catch (error) {
       console.error('Approval failed:', error);
       toast.error(error instanceof Error ? error.message : 'Unable to update approval.')
@@ -177,7 +200,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="rounded-xl bg-white shadow-md">
+            <div className="rounded-xl bg-white shadow-md" key={`table-${refreshKey}`}>
               <div className="border-b border-gray-200 p-4 sm:p-6">
                 <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Pending Approvals</h2>
                 <p className="mt-1 text-xs sm:text-sm text-gray-600">Approve or reject new marketplace entries.</p>
