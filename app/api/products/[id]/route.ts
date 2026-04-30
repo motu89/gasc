@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { connectToDatabase } from '@/lib/db';
+import { errorResponse, serializeProduct, validateProductPayload } from '@/lib/server-utils';
+import { ProductModel } from '@/models/Product';
 
-// Force dynamic rendering — prevents Vercel from caching this route
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-import { ProductModel } from '@/models/Product';
 
 type RouteContext = {
   params: {
