@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+
+// Force dynamic rendering — prevents Vercel from caching this route
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 import { connectToDatabase } from '@/lib/db';
 import { ensureAdminUser, errorResponse, serializeService, validateServicePayload } from '@/lib/server-utils';
 import { ServiceModel } from '@/models/Service';
