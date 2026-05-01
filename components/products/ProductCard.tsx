@@ -16,14 +16,25 @@ export default function ProductCard({ product }: ProductCardProps) {
       rent: 'bg-blue-100 text-blue-800',
       sale: 'bg-green-100 text-green-800',
       installment: 'bg-purple-100 text-purple-800',
+      sale_installment: 'bg-gradient-to-r from-green-100 to-purple-100 text-green-800',
     }
     return colors[product.type]
+  }
+
+  const getTypeLabel = () => {
+    const labels = {
+      rent: 'RENT',
+      sale: 'SALE',
+      installment: 'INSTALLMENT',
+      sale_installment: 'SALE/INSTALLMENT',
+    }
+    return labels[product.type]
   }
 
   return (
     <Link href={`/products/${product.id}`}>
       <div className="group overflow-hidden rounded-xl bg-white shadow-md transition-all duration-300 hover:shadow-xl">
-        <div className="relative h-48">
+        <div className="relative h-32 sm:h-48">
           <MarketplaceImage
             src={product.images[0]}
             alt={product.title}
@@ -31,29 +42,39 @@ export default function ProductCard({ product }: ProductCardProps) {
             className="h-full w-full"
             imgClassName="transition-transform duration-300 group-hover:scale-110"
           />
-          <div className={`absolute left-2 top-2 rounded-full px-3 py-1 text-xs font-semibold ${getTypeBadge()}`}>
-            {product.type.toUpperCase()}
+          <div className={`absolute left-2 top-2 rounded-full px-2 py-0.5 text-xs font-semibold ${getTypeBadge()}`}>
+            {getTypeLabel()}
           </div>
         </div>
-        <div className="p-5">
-          <h3 className="mb-2 text-xl font-semibold text-gray-800 transition group-hover:text-primary-600">
+        <div className="p-3 sm:p-5">
+          <h3 className="mb-1 sm:mb-2 text-sm sm:text-xl font-semibold text-gray-800 transition group-hover:text-primary-600 line-clamp-1">
             {product.title}
           </h3>
-          <p className="mb-3 line-clamp-2 text-sm text-gray-600">{product.description}</p>
-          <div className="mb-3 flex items-center text-sm text-gray-500">
-            <FiMapPin className="mr-1 h-4 w-4" />
-            <span>{product.location}</span>
+          <p className="mb-2 sm:mb-3 line-clamp-2 text-xs sm:text-sm text-gray-600 hidden sm:block">{product.description}</p>
+          <div className="mb-2 sm:mb-3 flex items-center text-xs sm:text-sm text-gray-500">
+            <FiMapPin className="mr-1 h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+            <span className="truncate">{product.location}</span>
           </div>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-2xl font-bold text-primary-600">{formatCurrency(product.price)}</p>
+              <p className="text-base sm:text-2xl font-bold text-primary-600">{formatCurrency(product.price)}</p>
               {product.type === 'installment' && product.monthlyInstallment && (
-                <p className="text-xs text-gray-500">{formatCurrency(product.monthlyInstallment)}/month</p>
+                <p className="text-xs text-gray-500 hidden sm:block">{formatCurrency(product.monthlyInstallment)}/month</p>
+              )}
+              {product.type === 'sale_installment' && product.monthlyInstallment && (
+                <div className="mt-1 hidden sm:block">
+                  <p className="text-xs font-medium text-purple-600">
+                    Or {formatCurrency(product.monthlyInstallment)}/month
+                  </p>
+                  {product.installmentMonths && (
+                    <p className="text-xs text-gray-500">for {product.installmentMonths} months</p>
+                  )}
+                </div>
               )}
               {product.type === 'rent' && <p className="text-xs text-gray-500">per day</p>}
             </div>
-            <div className="text-sm text-gray-600">
-              <FiTag className="mr-1 inline h-4 w-4" />
+            <div className="text-xs sm:text-sm text-gray-600 hidden sm:flex items-center">
+              <FiTag className="mr-1 inline h-3 w-3 sm:h-4 sm:w-4" />
               {getProductCategoryLabel(product.category)}
             </div>
           </div>

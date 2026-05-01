@@ -25,6 +25,8 @@ export default function RegisterPage() {
     role: 'user' as UserRole,
   })
   const [loading, setLoading] = useState(false)
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [touched, setTouched] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     const role = searchParams.get('role') as UserRole | null
@@ -33,16 +35,116 @@ export default function RegisterPage() {
     }
   }, [searchParams])
 
+  // Validation functions
+  const validatePhone = (phone: string): string => {
+    if (!phone) return ''
+    const digitsOnly = phone.replace(/\D/g, '')
+    if (digitsOnly.length !== 11) {
+      return 'Phone number must be exactly 11 digits'
+    }
+    return ''
+  }
+
+  const validateEmail = (email: string): string => {
+    if (!email) return ''
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return 'Please enter a valid email address'
+    }
+    return ''
+  }
+
+  const validatePassword = (password: string): string => {
+    if (!password) return ''
+    if (password.length < 6) {
+      return 'Password must be at least 6 characters'
+    }
+    if (password.length > 20) {
+      return 'Password must be at most 20 characters'
+    }
+    return ''
+  }
+
+  const getPasswordStrength = (password: string): { strength: number; label: string; color: string } => {
+    if (!password) return { strength: 0, label: '', color: '' }
+    
+    let strength = 0
+    
+    // Length check
+    if (password.length >= 6) strength += 1
+    if (password.length >= 10) strength += 1
+    
+    // Complexity checks
+    if (/[a-z]/.test(password)) strength += 1
+    if (/[A-Z]/.test(password)) strength += 1
+    if (/\d/.test(password)) strength += 1
+    if (/[^a-zA-Z0-9]/.test(password)) strength += 1
+    
+    if (strength <= 2) return { strength: 1, label: 'Weak', color: 'bg-red-500' }
+    if (strength <= 4) return { strength: 2, label: 'Medium', color: 'bg-yellow-500' }
+    return { strength: 3, label: 'Strong', color: 'bg-green-500' }
+  }
+
+  const handleFieldChange = (field: string, value: string) => {
+    // For phone field, only allow digits
+    if (field === 'phone') {
+      const digitsOnly = value.replace(/\D/g, '')
+      if (digitsOnly.length <= 11) {
+        setFormData({ ...formData, [field]: digitsOnly })
+        // Real-time validation for phone
+        if (touched[field]) {
+          const error = validatePhone(digitsOnly)
+          setErrors({ ...errors, [field]: error })
+        }
+      }
+    } else {
+      setFormData({ ...formData, [field]: value })
+
+      // Real-time validation for other fields
+      if (touched[field]) {
+        let error = ''
+        if (field === 'email') error = validateEmail(value)
+        if (field === 'password') error = validatePassword(value)
+        if (field === 'confirmPassword') {
+          if (value !== formData.password) error = 'Passwords do not match'
+        }
+        setErrors({ ...errors, [field]: error })
+      }
+    }
+  }
+
+  const handleBlur = (field: string) => {
+    setTouched({ ...touched, [field]: true })
+    
+    let error = ''
+    if (field === 'phone') error = validatePhone(formData.phone)
+    if (field === 'email') error = validateEmail(formData.email)
+    if (field === 'password') error = validatePassword(formData.password)
+    if (field === 'confirmPassword') {
+      if (formData.confirmPassword !== formData.password) error = 'Passwords do not match'
+    }
+    setErrors({ ...errors, [field]: error })
+  }
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
 
-    if (formData.password.length < 6) {
-      toast.error('Password must be at least 6 characters long.')
-      return
-    }
+    // Validate all fields
+    const newErrors: Record<string, string> = {}
+    const phoneError = validatePhone(formData.phone)
+    const emailError = validateEmail(formData.email)
+    const passwordError = validatePassword(formData.password)
+    const confirmError = formData.password !== formData.confirmPassword ? 'Passwords do not match' : ''
 
-    if (formData.password !== formData.confirmPassword) {
-      toast.error('Passwords do not match.')
+    if (phoneError) newErrors.phone = phoneError
+    if (emailError) newErrors.email = emailError
+    if (passwordError) newErrors.password = passwordError
+    if (confirmError) newErrors.confirmPassword = confirmError
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
+      setTouched({ phone: true, email: true, password: true, confirmPassword: true })
+      toast.error('Please fix the errors in the form')
       return
     }
 
@@ -64,6 +166,8 @@ export default function RegisterPage() {
       setLoading(false)
     }
   }
+
+  const passwordStrength = getPasswordStrength(formData.password)
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-amber-50 via-white to-orange-100 px-4 py-6 sm:py-10">
@@ -123,35 +227,63 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-800">Email Address</label>
-                <div className="relative">
-                  <FiMail className="absolute left-3 top-1/2 h-4 w-4 sm:h-5 sm:w-5 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(event) => setFormData({ ...formData, email: event.target.value })}
-                    className="w-full rounded-lg sm:rounded-xl border border-gray-300 py-2.5 sm:py-3 pl-9 sm:pl-10 pr-3 sm:pr-4 text-sm sm:text-base text-gray-900 focus:border-transparent focus:ring-2 focus:ring-primary-500"
-                    placeholder="you@example.com"
-                    required
-                  />
-                </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-800">Email Address</label>
+              <div className="relative">
+                <FiMail className="absolute left-3 top-1/2 h-4 w-4 sm:h-5 sm:w-5 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(event) => handleFieldChange('email', event.target.value)}
+                  onBlur={() => handleBlur('email')}
+                  className={`w-full rounded-lg sm:rounded-xl border ${
+                    touched.email && errors.email ? 'border-red-500' : 'border-gray-300'
+                  } py-2.5 sm:py-3 pl-9 sm:pl-10 pr-3 sm:pr-4 text-sm sm:text-base text-gray-900 focus:border-transparent focus:ring-2 ${
+                    touched.email && errors.email ? 'focus:ring-red-500' : 'focus:ring-primary-500'
+                  }`}
+                  placeholder="you@example.com"
+                  required
+                />
+                {touched.email && !errors.email && formData.email && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500">
+                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                )}
               </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-800">Phone</label>
-                <div className="relative">
-                  <FiPhone className="absolute left-3 top-1/2 h-4 w-4 sm:h-5 sm:w-5 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(event) => setFormData({ ...formData, phone: event.target.value })}
-                    className="w-full rounded-lg sm:rounded-xl border border-gray-300 py-2.5 sm:py-3 pl-9 sm:pl-10 pr-3 sm:pr-4 text-sm sm:text-base text-gray-900 focus:border-transparent focus:ring-2 focus:ring-primary-500"
-                    placeholder="+92..."
-                  />
-                </div>
-              </div>
+              {touched.email && errors.email && (
+                <p className="mt-1 text-xs text-red-600">{errors.email}</p>
+              )}
             </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-800">Phone Number</label>
+              <div className="relative">
+                <FiPhone className="absolute left-3 top-1/2 h-4 w-4 sm:h-5 sm:w-5 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(event) => handleFieldChange('phone', event.target.value)}
+                  onBlur={() => handleBlur('phone')}
+                  className={`w-full rounded-lg sm:rounded-xl border ${
+                    touched.phone && errors.phone ? 'border-red-500' : 'border-gray-300'
+                  } py-2.5 sm:py-3 pl-9 sm:pl-10 pr-3 sm:pr-4 text-sm sm:text-base text-gray-900 focus:border-transparent focus:ring-2 ${
+                    touched.phone && errors.phone ? 'focus:ring-red-500' : 'focus:ring-primary-500'
+                  }`}
+                  placeholder="Enter 11 digits"
+                  maxLength={11}
+                  required
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-gray-500">
+                  {formData.phone.length}/11
+                </div>
+              </div>
+              {touched.phone && errors.phone && (
+                <p className="mt-1 text-xs text-red-600">{errors.phone}</p>
+              )}
+            </div>
+
+            <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
 
             <div>
               <label className="mb-2 block text-sm font-medium text-gray-800">Register As</label>
@@ -168,21 +300,53 @@ export default function RegisterPage() {
               </select>
             </div>
 
-            <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-800">Password</label>
-                <div className="relative">
-                  <FiLock className="absolute left-3 top-1/2 h-4 w-4 sm:h-5 sm:w-5 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="password"
-                    value={formData.password}
-                    onChange={(event) => setFormData({ ...formData, password: event.target.value })}
-                    className="w-full rounded-lg sm:rounded-xl border border-gray-300 py-2.5 sm:py-3 pl-9 sm:pl-10 pr-3 sm:pr-4 text-sm sm:text-base text-gray-900 focus:border-transparent focus:ring-2 focus:ring-primary-500"
-                    placeholder="Create a password"
-                    required
-                  />
-                </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-800">Password</label>
+              <div className="relative">
+                <FiLock className="absolute left-3 top-1/2 h-4 w-4 sm:h-5 sm:w-5 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="password"
+                  value={formData.password}
+                  onChange={(event) => handleFieldChange('password', event.target.value)}
+                  onBlur={() => handleBlur('password')}
+                  className={`w-full rounded-lg sm:rounded-xl border ${
+                    touched.password && errors.password ? 'border-red-500' : 'border-gray-300'
+                  } py-2.5 sm:py-3 pl-9 sm:pl-10 pr-3 sm:pr-4 text-sm sm:text-base text-gray-900 focus:border-transparent focus:ring-2 ${
+                    touched.password && errors.password ? 'focus:ring-red-500' : 'focus:ring-primary-500'
+                  }`}
+                  placeholder="Create a password (6-20 characters)"
+                  required
+                />
               </div>
+              {formData.password && (
+                <div className="mt-2">
+                  <div className="mb-1 flex items-center justify-between">
+                    <span className="text-xs font-medium text-gray-700">Password Strength:</span>
+                    <span className={`text-xs font-semibold ${
+                      passwordStrength.label === 'Weak' ? 'text-red-600' :
+                      passwordStrength.label === 'Medium' ? 'text-yellow-600' :
+                      'text-green-600'
+                    }`}>
+                      {passwordStrength.label}
+                    </span>
+                  </div>
+                  <div className="flex gap-1">
+                    <div className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
+                      passwordStrength.strength >= 1 ? passwordStrength.color : 'bg-gray-200'
+                    }`} />
+                    <div className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
+                      passwordStrength.strength >= 2 ? passwordStrength.color : 'bg-gray-200'
+                    }`} />
+                    <div className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
+                      passwordStrength.strength >= 3 ? passwordStrength.color : 'bg-gray-200'
+                    }`} />
+                  </div>
+                </div>
+              )}
+              {touched.password && errors.password && (
+                <p className="mt-1 text-xs text-red-600">{errors.password}</p>
+              )}
+            </div>
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-800">Confirm Password</label>
                 <div className="relative">
@@ -190,12 +354,27 @@ export default function RegisterPage() {
                   <input
                     type="password"
                     value={formData.confirmPassword}
-                    onChange={(event) => setFormData({ ...formData, confirmPassword: event.target.value })}
-                    className="w-full rounded-lg sm:rounded-xl border border-gray-300 py-2.5 sm:py-3 pl-9 sm:pl-10 pr-3 sm:pr-4 text-sm sm:text-base text-gray-900 focus:border-transparent focus:ring-2 focus:ring-primary-500"
+                    onChange={(event) => handleFieldChange('confirmPassword', event.target.value)}
+                    onBlur={() => handleBlur('confirmPassword')}
+                    className={`w-full rounded-lg sm:rounded-xl border ${
+                      touched.confirmPassword && errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
+                    } py-2.5 sm:py-3 pl-9 sm:pl-10 pr-3 sm:pr-4 text-sm sm:text-base text-gray-900 focus:border-transparent focus:ring-2 ${
+                      touched.confirmPassword && errors.confirmPassword ? 'focus:ring-red-500' : 'focus:ring-primary-500'
+                    }`}
                     placeholder="Confirm your password"
                     required
                   />
+                  {touched.confirmPassword && !errors.confirmPassword && formData.confirmPassword && formData.password === formData.confirmPassword && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500">
+                      <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
                 </div>
+                {touched.confirmPassword && errors.confirmPassword && (
+                  <p className="mt-1 text-xs text-red-600">{errors.confirmPassword}</p>
+                )}
               </div>
             </div>
 

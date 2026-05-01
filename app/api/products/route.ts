@@ -94,12 +94,17 @@ export async function POST(request: NextRequest) {
       images: validated.images,
       vendorId: validated.vendorId,
       vendorName: validated.vendorName,
+      vendorEmail: validated.vendorEmail || '',
       location: validated.location.trim(),
       available: validated.available !== false,
       installmentMonths:
-        validated.type === 'installment' ? Number(validated.installmentMonths) : undefined,
+        (validated.type === 'installment' || validated.type === 'sale_installment') 
+          ? Number(validated.installmentMonths) 
+          : undefined,
       monthlyInstallment:
-        validated.type === 'installment' ? Number(validated.monthlyInstallment) : undefined,
+        (validated.type === 'installment' || validated.type === 'sale_installment') 
+          ? Number(validated.monthlyInstallment) 
+          : undefined,
       approved: false,
     });
 

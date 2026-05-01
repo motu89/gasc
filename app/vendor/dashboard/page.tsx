@@ -3,14 +3,14 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
-import { FiEdit, FiPackage, FiPlus, FiTrash2, FiTrendingUp } from 'react-icons/fi'
+import { FiEdit, FiPackage, FiPlus, FiTrash2, FiTrendingUp, FiDollarSign, FiUpload, FiShoppingBag, FiEye } from 'react-icons/fi'
 import ProductForm from '@/components/forms/ProductForm'
 import DashboardSidebar from '@/components/layout/DashboardSidebar'
 import MarketplaceImage from '@/components/shared/MarketplaceImage'
 import { apiRequest } from '@/lib/api-client'
-import { formatCurrency, getProductCategoryLabel, getProductTypeLabel } from '@/lib/format'
+import { formatCurrency, getProductCategoryLabel, getProductTypeLabel, formatDate } from '@/lib/format'
 import { useStore } from '@/lib/store'
-import { Product } from '@/types'
+import { Product, Order } from '@/types'
 
 type ProductFormValues = {
   title: string
@@ -33,14 +33,31 @@ export default function VendorDashboard() {
   const [saving, setSaving] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [showPaymentForm, setShowPaymentForm] = useState(false)
+  const [paymentMethods, setPaymentMethods] = useState({ easyPaisaAccount: '', jazzCashAccount: '' })
+  const [paymentSaving, setPaymentSaving] = useState(false)
+  const [paymentMethodsLoaded, setPaymentMethodsLoaded] = useState(false)
+  const [orders, setOrders] = useState<Order[]>([])
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+  const [showOrderDetails, setShowOrderDetails] = useState(false)
+  const [confirmingOrder, setConfirmingOrder] = useState(false)
 
   const loadProducts = async () => {
     if (!user) return
 
     setLoading(true)
     try {
-      const response = await apiRequest<{ products: Product[] }>(`/api/products?vendorId=${user.id}`)
-      setProducts(response.products)
+      const [productsResponse, paymentResponse, ordersResponse] = await Promise.all([
+        apiRequest<{ products: Product[] }>(`/api/products?vendorId=${user.id}`),
+        apiRequest<{ user: { easyPaisaAccount: string; jazzCashAccount: string } }>(`/api/payment-methods?email=${user.email}`),
+        apiRequest<{ orders: Order[] }>(`/api/orders?vendorId=${user.id}`),
+      ])
+      setProducts(productsResponse.products)
+      if (!paymentMethodsLoaded) {
+        setPaymentMethods(paymentResponse.user)
+        setPaymentMethodsLoaded(true)
+      }
+      setOrders(ordersResponse.orders)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Unable to load products.')
     } finally {
@@ -81,6 +98,7 @@ export default function VendorDashboard() {
         monthlyInstallment: values.monthlyInstallment ? Number(values.monthlyInstallment) : undefined,
         vendorId: user.id,
         vendorName: user.name,
+        vendorEmail: user.email,
       }
 
       if (editingProduct) {
@@ -117,10 +135,50 @@ export default function VendorDashboard() {
     }
   }
 
+  const handlePaymentMethodSubmit = async () => {
+    if (!paymentMethods.easyPaisaAccount && !paymentMethods.jazzCashAccount) {
+      toast.error('Please add at least one payment method.')
+      return
+    }
+
+    try {
+      setPaymentSaving(true)
+      await apiRequest('/api/payment-methods', {
+        method: 'PUT',
+        body: JSON.stringify({ email: user.email, ...paymentMethods }),
+      })
+      toast.success('Payment methods updated successfully.')
+      setShowPaymentForm(false)
+      setPaymentMethodsLoaded(false)
+      await loadProducts()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to update payment methods.')
+    } finally {
+      setPaymentSaving(false)
+    }
+  }
+
+  const handleConfirmOrder = async (orderId: string) => {
+    try {
+      setConfirmingOrder(true)
+      await apiRequest('/api/orders', {
+        method: 'PATCH',
+        body: JSON.stringify({ orderId, status: 'confirmed', vendorId: user.id }),
+      })
+      toast.success('Order confirmed successfully!')
+      setShowOrderDetails(false)
+      setSelectedOrder(null)
+      await loadProducts()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to confirm order.')
+    } finally {
+      setConfirmingOrder(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <DashboardSidebar role="vendor" />
-
+      <DashboardSidebar role={user.role} />
       <div className="ml-0 lg:ml-64 min-h-screen p-4 sm:p-6 md:p-8 pt-16 lg:pt-8">
         <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
           <div>
@@ -177,6 +235,321 @@ export default function VendorDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Payment Methods Section */}
+        <div className="mb-6 sm:mb-8 rounded-xl bg-white p-4 sm:p-6 shadow-md">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Payment Methods</h2>
+              <p className="mt-1 text-xs sm:text-sm text-gray-600">Add your EasyPaisa and JazzCash account numbers to receive payments</p>
+            </div>
+            <button
+              onClick={() => setShowPaymentForm(!showPaymentForm)}
+              className="flex items-center gap-2 rounded-lg bg-green-600 px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base text-white transition hover:bg-green-700"
+            >
+              <FiDollarSign className="h-4 w-4 sm:h-5 sm:w-5" />
+              {showPaymentForm ? 'Cancel' : 'Add Payment Method'}
+            </button>
+          </div>
+
+          {showPaymentForm ? (
+            <div className="rounded-lg border border-gray-200 p-4 sm:p-6">
+              <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
+                {/* EasyPaisa */}
+                <div>
+                  <div className="mb-2">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
+                        <span className="text-lg">💳</span>
+                      </div>
+                      <span className="font-semibold text-sm text-gray-900">EasyPaisa</span>
+                    </div>
+                    <span className="text-xs text-gray-600">Enter your EasyPaisa account number</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={paymentMethods.easyPaisaAccount}
+                    onChange={(e) => setPaymentMethods(prev => ({ ...prev, easyPaisaAccount: e.target.value }))}
+                    placeholder="03XX-XXXXXXX"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm sm:text-base text-gray-900 focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+
+                {/* JazzCash */}
+                <div>
+                  <div className="mb-2">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="h-8 w-8 rounded-full bg-red-100 flex items-center justify-center">
+                        <span className="text-lg">💰</span>
+                      </div>
+                      <span className="font-semibold text-sm text-gray-900">JazzCash</span>
+                    </div>
+                    <span className="text-xs text-gray-600">Enter your JazzCash account number</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={paymentMethods.jazzCashAccount}
+                    onChange={(e) => setPaymentMethods(prev => ({ ...prev, jazzCashAccount: e.target.value }))}
+                    placeholder="03XX-XXXXXXX"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm sm:text-base text-gray-900 focus:ring-2 focus:ring-red-500"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 flex gap-3">
+                <button
+                  onClick={handlePaymentMethodSubmit}
+                  disabled={paymentSaving}
+                  className="flex items-center gap-2 rounded-lg bg-primary-600 px-6 py-2.5 text-sm sm:text-base text-white transition hover:bg-primary-700 disabled:opacity-60"
+                >
+                  <FiUpload className="h-4 w-4" />
+                  {paymentSaving ? 'Saving...' : 'Save Payment Methods'}
+                </button>
+                <button
+                  onClick={() => setShowPaymentForm(false)}
+                  className="rounded-lg border border-gray-300 px-6 py-2.5 text-sm sm:text-base text-gray-700 transition hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
+              <div className="rounded-lg border border-gray-200 p-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                    <span className="text-2xl">💳</span>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900">EasyPaisa</p>
+                    <p className="text-xs text-gray-600">Mobile Account</p>
+                  </div>
+                </div>
+                {paymentMethods.easyPaisaAccount ? (
+                  <p className="text-lg font-mono font-bold text-green-700">{paymentMethods.easyPaisaAccount}</p>
+                ) : (
+                  <p className="text-sm text-gray-500">Not added yet</p>
+                )}
+              </div>
+
+              <div className="rounded-lg border border-gray-200 p-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
+                    <span className="text-2xl">💰</span>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900">JazzCash</p>
+                    <p className="text-xs text-gray-600">Mobile Account</p>
+                  </div>
+                </div>
+                {paymentMethods.jazzCashAccount ? (
+                  <p className="text-lg font-mono font-bold text-red-700">{paymentMethods.jazzCashAccount}</p>
+                ) : (
+                  <p className="text-sm text-gray-500">Not added yet</p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Orders Section */}
+        <div className="mb-6 sm:mb-8 rounded-xl bg-white p-4 sm:p-6 shadow-md">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Customer Orders</h2>
+              <p className="mt-1 text-xs sm:text-sm text-gray-600">View orders and payment proofs from customers</p>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="text-sm sm:text-base text-gray-600">Loading orders...</div>
+          ) : orders.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-gray-300 p-6 sm:p-8 text-center text-sm sm:text-base text-gray-600">
+              No orders yet.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {orders.map((order) => (
+                <div key={order.id} className="rounded-xl border border-gray-200 p-4">
+                  <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900">Order #{order.orderNumber.slice(-8)}</h3>
+                        <span className={`rounded-full px-2 sm:px-3 py-1 text-xs font-semibold ${
+                          order.status === 'confirmed' ? 'bg-green-100 text-green-800'
+                          : order.status === 'pending' ? 'bg-yellow-100 text-yellow-800'
+                          : order.status === 'shipped' ? 'bg-blue-100 text-blue-800'
+                          : order.status === 'delivered' ? 'bg-purple-100 text-purple-800'
+                          : 'bg-gray-200 text-gray-700'
+                        }`}>
+                          {order.status}
+                        </span>
+                      </div>
+                      <p className="text-xs sm:text-sm text-gray-600 mb-1">Customer: {order.userName}</p>
+                      <p className="text-xs sm:text-sm text-gray-600 mb-1">Email: {order.userEmail}</p>
+                      <p className="text-xs sm:text-sm text-gray-600">Date: {formatDate(order.createdAt)}</p>
+                      <div className="mt-2 rounded-lg bg-gray-50 p-3">
+                        <p className="text-xs font-medium text-gray-700 mb-1">Items:</p>
+                        {order.items.map((item, index) => (
+                          <p key={index} className="text-xs text-gray-600">
+                            {item.productTitle} x {item.quantity} - {formatCurrency(item.totalPrice)}
+                          </p>
+                        ))}
+                      </div>
+                      <div className="mt-3 flex items-center gap-4">
+                        <p className="text-base sm:text-lg font-bold text-primary-600">Total: {formatCurrency(order.totalAmount)}</p>
+                        <span className={`rounded-full px-2 sm:px-3 py-1 text-xs font-semibold ${
+                          order.paymentMethod === 'easypaisa' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
+                          {order.paymentMethod === 'easypaisa' ? '💳 EasyPaisa' : '💰 JazzCash'}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedOrder(order)
+                        setShowOrderDetails(true)
+                      }}
+                      className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm text-white transition hover:bg-primary-700"
+                    >
+                      <FiEye className="h-4 w-4" />
+                      View Payment Proof
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Order Details Modal */}
+        {showOrderDetails && selectedOrder && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className="relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl max-h-[90vh] overflow-y-auto">
+              <button
+                onClick={() => {
+                  setShowOrderDetails(false)
+                  setSelectedOrder(null)
+                }}
+                className="absolute right-4 top-4 rounded-full p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h2 className="text-xl font-bold text-gray-900">Order Details</h2>
+                <p className="mt-1 text-sm text-gray-600">Order #{selectedOrder.orderNumber.slice(-8)}</p>
+              </div>
+
+              <div className="px-6 py-6 space-y-6">
+                {/* Customer Info */}
+                <div className="rounded-lg bg-gray-50 p-4">
+                  <h3 className="font-semibold text-gray-900 mb-2">Customer Information</h3>
+                  <p className="text-sm text-gray-600">Name: {selectedOrder.userName}</p>
+                  <p className="text-sm text-gray-600">Email: {selectedOrder.userEmail}</p>
+                </div>
+
+                {/* Order Items */}
+                <div className="rounded-lg bg-gray-50 p-4">
+                  <h3 className="font-semibold text-gray-900 mb-2">Order Items</h3>
+                  {selectedOrder.items.map((item, index) => (
+                    <div key={index} className="flex items-center gap-3 mb-3 last:mb-0">
+                      <div className="h-16 w-16 rounded-lg bg-gray-200 flex items-center justify-center">
+                        <FiShoppingBag className="h-6 w-6 text-gray-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">{item.productTitle}</p>
+                        <p className="text-xs text-gray-600">Quantity: {item.quantity}</p>
+                      </div>
+                      <p className="text-sm font-bold text-gray-900">{formatCurrency(item.totalPrice)}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Payment Info */}
+                <div className="rounded-lg bg-gray-50 p-4">
+                  <h3 className="font-semibold text-gray-900 mb-2">Payment Information</h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Payment Method:</span>
+                      <span className="font-medium">
+                        {selectedOrder.paymentMethod === 'easypaisa' ? '💳 EasyPaisa' : '💰 JazzCash'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Total Amount:</span>
+                      <span className="font-bold text-primary-600">{formatCurrency(selectedOrder.totalAmount)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Status:</span>
+                      <span className="font-medium capitalize">{selectedOrder.status}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment Proof */}
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">Payment Proof Screenshot</h3>
+                  <div className="rounded-lg border border-gray-200 overflow-hidden">
+                    <img
+                      src={selectedOrder.paymentProof}
+                      alt="Payment proof"
+                      className="w-full h-auto max-h-96 object-contain bg-gray-50"
+                    />
+                  </div>
+                  <p className="mt-2 text-xs text-gray-600 text-center">
+                    Verify the payment screenshot before confirming the order
+                  </p>
+                </div>
+
+                {/* Confirm Order Action */}
+                {selectedOrder.status === 'pending' && (
+                  <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+                    <p className="text-sm text-green-800 mb-3 font-medium">
+                      ✅ After verifying the payment proof above, confirm this order to notify the customer.
+                    </p>
+                    <button
+                      onClick={() => handleConfirmOrder(selectedOrder.id)}
+                      disabled={confirmingOrder}
+                      className="w-full rounded-lg bg-green-600 py-3 font-semibold text-white transition hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {confirmingOrder ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                          </svg>
+                          Confirming...
+                        </>
+                      ) : (
+                        '✓ Confirm Order'
+                      )}
+                    </button>
+                  </div>
+                )}
+                {selectedOrder.status !== 'pending' && (
+                  <div className={`rounded-lg border p-4 text-center ${
+                    selectedOrder.status === 'confirmed' ? 'border-green-200 bg-green-50'
+                    : selectedOrder.status === 'shipped' ? 'border-blue-200 bg-blue-50'
+                    : selectedOrder.status === 'delivered' ? 'border-purple-200 bg-purple-50'
+                    : 'border-gray-200 bg-gray-50'
+                  }`}>
+                    <p className={`text-sm font-semibold capitalize ${
+                      selectedOrder.status === 'confirmed' ? 'text-green-800'
+                      : selectedOrder.status === 'shipped' ? 'text-blue-800'
+                      : selectedOrder.status === 'delivered' ? 'text-purple-800'
+                      : 'text-gray-700'
+                    }`}>
+                      Order is {selectedOrder.status}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {(showForm || editingProduct) && (
           <div className="mb-6 sm:mb-8 rounded-xl bg-white p-4 sm:p-6 shadow-md">

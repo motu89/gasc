@@ -7,10 +7,12 @@ export interface User {
   role: UserRole;
   phone?: string;
   address?: string;
+  easyPaisaAccount?: string;
+  jazzCashAccount?: string;
   createdAt: string;
 }
 
-export type ProductType = 'rent' | 'sale' | 'installment';
+export type ProductType = 'rent' | 'sale' | 'installment' | 'sale_installment';
 export type ProductCategory = 'electronics' | 'home_appliances' | 'machinery' | 'furniture' | 'vehicles' | 'other';
 
 export interface Product {
@@ -23,6 +25,7 @@ export interface Product {
   images: string[];
   vendorId: string;
   vendorName: string;
+  vendorEmail?: string;
   location: string;
   available: boolean;
   installmentMonths?: number;
@@ -59,8 +62,12 @@ export interface Booking {
   date: string;
   time: string;
   duration: number;
+  fullPrice: number;
+  depositAmount: number;
   totalAmount: number;
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  paymentMethod?: 'easypaisa' | 'jazzcash';
+  paymentProof?: string;
   createdAt: string;
 }
 
@@ -71,16 +78,45 @@ export interface CartItem {
   rentalDays?: number;
   startDate?: string;
   endDate?: string;
+  paymentMethod?: 'sale' | 'installment';
+}
+
+export interface OrderItem {
+  productId: string;
+  productTitle: string;
+  productImage: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  rentalDays?: number;
+  paymentMethod?: 'sale' | 'installment';
+  installmentMonths?: number;
+  monthlyInstallment?: number;
 }
 
 export interface Order {
   id: string;
+  orderNumber: string;
   userId: string;
-  items: CartItem[];
+  userName: string;
+  userEmail: string;
+  items: OrderItem[];
+  subtotal: number;
   totalAmount: number;
+  paymentMethod: 'easypaisa' | 'jazzcash';
+  paymentProof: string;
+  vendorId: string;
+  vendorName: string;
   status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
   createdAt: string;
-  deliveryAddress: string;
+}
+
+export interface PaymentModalState {
+  isOpen: boolean;
+  step: 'select-method' | 'view-details' | 'upload-proof';
+  selectedMethod: 'easypaisa' | 'jazzcash' | null;
+  accountNumber: string;
+  screenshot: string | null;
 }
 
 export interface ApiErrorResponse {

@@ -63,10 +63,15 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
     product.location = validated.location.trim();
     product.available = validated.available !== false;
     product.vendorName = validated.vendorName || product.vendorName;
+    product.vendorEmail = validated.vendorEmail || product.vendorEmail;
     product.installmentMonths =
-      validated.type === 'installment' ? Number(validated.installmentMonths) : undefined;
+      (validated.type === 'installment' || validated.type === 'sale_installment') 
+        ? Number(validated.installmentMonths) 
+        : undefined;
     product.monthlyInstallment =
-      validated.type === 'installment' ? Number(validated.monthlyInstallment) : undefined;
+      (validated.type === 'installment' || validated.type === 'sale_installment') 
+        ? Number(validated.monthlyInstallment) 
+        : undefined;
     product.approved = false;
 
     await product.save();

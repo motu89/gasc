@@ -4,11 +4,12 @@ export interface ProductDocument {
   title: string;
   description: string;
   price: number;
-  type: 'rent' | 'sale' | 'installment';
+  type: 'rent' | 'sale' | 'installment' | 'sale_installment';
   category: 'electronics' | 'home_appliances' | 'machinery' | 'furniture' | 'vehicles' | 'other';
   images: string[];
   vendorId: string;
   vendorName: string;
+  vendorEmail?: string;
   location: string;
   available: boolean;
   installmentMonths?: number;
@@ -23,7 +24,7 @@ const ProductSchema = new Schema<ProductDocument>(
     title: { type: String, required: true, trim: true },
     description: { type: String, required: true, trim: true },
     price: { type: Number, required: true, min: 0 },
-    type: { type: String, enum: ['rent', 'sale', 'installment'], required: true },
+    type: { type: String, enum: ['rent', 'sale', 'installment', 'sale_installment'], required: true },
     category: {
       type: String,
       enum: ['electronics', 'home_appliances', 'machinery', 'furniture', 'vehicles', 'other'],
@@ -39,6 +40,7 @@ const ProductSchema = new Schema<ProductDocument>(
     },
     vendorId: { type: String, required: true },
     vendorName: { type: String, required: true, trim: true },
+    vendorEmail: { type: String, trim: true },
     location: { type: String, required: true, trim: true },
     available: { type: Boolean, default: true },
     installmentMonths: { type: Number, min: 1 },
@@ -50,5 +52,10 @@ const ProductSchema = new Schema<ProductDocument>(
   }
 );
 
-export const ProductModel: Model<ProductDocument> =
-  mongoose.models.Product || mongoose.model<ProductDocument>('Product', ProductSchema);
+export const ProductModel: Model<ProductDocument> = (() => {
+  if (mongoose.models.Product) {
+    // Delete cached model to apply schema updates
+    delete mongoose.models.Product;
+  }
+  return mongoose.model<ProductDocument>('Product', ProductSchema);
+})();

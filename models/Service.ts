@@ -7,6 +7,7 @@ export interface ServiceDocument {
   images: string[];
   providerId: string;
   providerName: string;
+  providerEmail?: string;
   hourlyRate: number;
   location: string;
   available: boolean;
@@ -32,6 +33,7 @@ const ServiceSchema = new Schema<ServiceDocument>(
     },
     providerId: { type: String, required: true },
     providerName: { type: String, required: true, trim: true },
+    providerEmail: { type: String, trim: true },
     hourlyRate: { type: Number, required: true, min: 0 },
     location: { type: String, required: true, trim: true },
     available: { type: Boolean, default: true },

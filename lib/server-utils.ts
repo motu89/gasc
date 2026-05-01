@@ -28,6 +28,8 @@ export function serializeUser(user: any): User {
     role: user.role,
     phone: user.phone || '',
     address: user.address || '',
+    easyPaisaAccount: user.easyPaisaAccount || '',
+    jazzCashAccount: user.jazzCashAccount || '',
     createdAt: user.createdAt instanceof Date ? user.createdAt.toISOString() : user.createdAt,
   };
 }
@@ -43,6 +45,7 @@ export function serializeProduct(product: any): Product {
     images: Array.isArray(product.images) ? product.images : [],
     vendorId: product.vendorId,
     vendorName: product.vendorName,
+    vendorEmail: product.vendorEmail || '',
     location: product.location,
     available: Boolean(product.available),
     installmentMonths: product.installmentMonths,
@@ -84,7 +87,7 @@ export function validateProductPayload(payload: any) {
     return `Only ${MAX_IMAGE_UPLOADS} images are allowed per product.`;
   }
 
-  if (payload.type === 'installment') {
+  if (payload.type === 'installment' || payload.type === 'sale_installment') {
     if (Number(payload.installmentMonths) <= 0) return 'Installment months are required.';
     if (Number(payload.monthlyInstallment) <= 0) return 'Monthly installment is required.';
   }

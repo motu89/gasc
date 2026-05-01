@@ -7,6 +7,8 @@ export interface UserDocument {
   role: 'user' | 'vendor' | 'service_provider' | 'admin';
   phone?: string;
   address?: string;
+  easyPaisaAccount?: string;
+  jazzCashAccount?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -24,6 +26,8 @@ const UserSchema = new Schema<UserDocument>(
     },
     phone: { type: String, trim: true },
     address: { type: String, trim: true },
+    easyPaisaAccount: { type: String, trim: true },
+    jazzCashAccount: { type: String, trim: true },
   },
   {
     timestamps: true,

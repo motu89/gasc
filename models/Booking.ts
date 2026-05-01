@@ -10,8 +10,12 @@ export interface BookingDocument {
   date: string;
   time: string;
   duration: number;
+  fullPrice: number;
+  depositAmount: number;
   totalAmount: number;
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  paymentMethod?: 'easypaisa' | 'jazzcash';
+  paymentProof?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,12 +31,19 @@ const BookingSchema = new Schema<BookingDocument>(
     date: { type: String, required: true },
     time: { type: String, required: true },
     duration: { type: Number, required: true, min: 1 },
+    fullPrice: { type: Number, required: true, min: 0 },
+    depositAmount: { type: Number, required: true, min: 0 },
     totalAmount: { type: Number, required: true, min: 0 },
     status: {
       type: String,
       enum: ['pending', 'confirmed', 'completed', 'cancelled'],
       default: 'pending',
     },
+    paymentMethod: {
+      type: String,
+      enum: ['easypaisa', 'jazzcash'],
+    },
+    paymentProof: { type: String },
   },
   {
     timestamps: true,

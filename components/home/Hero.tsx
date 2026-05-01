@@ -52,7 +52,7 @@ export default function Hero() {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 md:py-24 h-full flex items-center">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 md:py-24 h-full flex flex-col items-center justify-center">
         <div className="text-center text-white w-full">
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 drop-shadow-lg leading-tight">
             Rent, Buy & Book Services
@@ -80,28 +80,28 @@ export default function Hero() {
         </div>
 
         {/* Features */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8 mt-8 sm:mt-12 md:mt-16 px-4 sm:px-0">
-          <div className="bg-white/20 backdrop-blur-md rounded-lg p-4 sm:p-6 text-center border border-white/30">
-            <FiShoppingBag className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 text-white" />
-            <h3 className="text-lg sm:text-xl font-semibold mb-2 text-white">Rent & Buy</h3>
-            <p className="text-sm sm:text-base text-white/90">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6 md:gap-8 mt-8 sm:mt-12 md:mt-16 px-2 sm:px-0">
+          <Link href="/#products-section" className="bg-white/20 backdrop-blur-md rounded-lg p-3 sm:p-6 text-center border border-white/30 hover:bg-white/30 transition cursor-pointer">
+            <FiShoppingBag className="w-7 h-7 sm:w-12 sm:h-12 mx-auto mb-2 sm:mb-4 text-white" />
+            <h3 className="text-sm sm:text-xl font-semibold mb-1 sm:mb-2 text-white">Rent & Buy</h3>
+            <p className="text-xs sm:text-base text-white/90 hidden sm:block">
               Find products for rent, sale, or flexible installment plans
             </p>
-          </div>
-          <div className="bg-white/20 backdrop-blur-md rounded-lg p-4 sm:p-6 text-center border border-white/30">
-            <FiTool className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 text-white" />
-            <h3 className="text-lg sm:text-xl font-semibold mb-2 text-white">Skilled Services</h3>
-            <p className="text-sm sm:text-base text-white/90">
+          </Link>
+          <Link href="/#services-section" className="bg-white/20 backdrop-blur-md rounded-lg p-3 sm:p-6 text-center border border-white/30 hover:bg-white/30 transition cursor-pointer">
+            <FiTool className="w-7 h-7 sm:w-12 sm:h-12 mx-auto mb-2 sm:mb-4 text-white" />
+            <h3 className="text-sm sm:text-xl font-semibold mb-1 sm:mb-2 text-white">Skilled Services</h3>
+            <p className="text-xs sm:text-base text-white/90 hidden sm:block">
               Book professional services from verified providers
             </p>
-          </div>
-          <div className="bg-white/20 backdrop-blur-md rounded-lg p-4 sm:p-6 text-center border border-white/30">
-            <FiCalendar className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 text-white" />
-            <h3 className="text-lg sm:text-xl font-semibold mb-2 text-white">Easy Booking</h3>
-            <p className="text-sm sm:text-base text-white/90">
+          </Link>
+          <Link href="/#services-section" className="bg-white/20 backdrop-blur-md rounded-lg p-3 sm:p-6 text-center border border-white/30 hover:bg-white/30 transition cursor-pointer col-span-2 md:col-span-1">
+            <FiCalendar className="w-7 h-7 sm:w-12 sm:h-12 mx-auto mb-2 sm:mb-4 text-white" />
+            <h3 className="text-sm sm:text-xl font-semibold mb-1 sm:mb-2 text-white">Easy Booking</h3>
+            <p className="text-xs sm:text-base text-white/90 hidden sm:block">
               Schedule services with our simple booking system
             </p>
-          </div>
+          </Link>
         </div>
       </div>
     </div>

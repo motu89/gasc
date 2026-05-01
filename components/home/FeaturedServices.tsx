@@ -16,7 +16,7 @@ export default function FeaturedServices() {
   }, [])
 
   return (
-    <section className="bg-white py-8 sm:py-12 md:py-16">
+    <section id="services-section" className="bg-white py-8 sm:py-12 md:py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mb-6 sm:mb-8 md:mb-12 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 text-center sm:text-left">Featured Services</h2>
@@ -26,7 +26,7 @@ export default function FeaturedServices() {
         </div>
 
         {services.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
             {services.map((service) => (
               <ServiceCard key={service.id} service={service} />
             ))}

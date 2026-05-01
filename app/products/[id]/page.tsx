@@ -18,6 +18,7 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true)
   const [rentalDays, setRentalDays] = useState(1)
   const [quantity, setQuantity] = useState(1)
+  const [paymentMethod, setPaymentMethod] = useState<'sale' | 'installment'>('sale')
 
   useEffect(() => {
     if (!params?.id) return
@@ -68,13 +69,22 @@ export default function ProductDetailPage() {
       product,
       quantity,
       rentalDays: product.type === 'rent' ? rentalDays : undefined,
+      paymentMethod: product.type === 'sale_installment' ? paymentMethod : undefined,
     })
 
-    toast.success('Product added to cart.')
+    const methodText = paymentMethod === 'installment' ? ' installment plan' : ''
+    toast.success(`Product${methodText} added to cart.`)
   }
 
-  const totalPrice =
-    product.type === 'rent' ? product.price * rentalDays * quantity : product.price * quantity
+  const totalPrice = (() => {
+    if (product.type === 'rent') {
+      return product.price * rentalDays * quantity
+    }
+    if (product.type === 'sale_installment' && paymentMethod === 'installment') {
+      return product.monthlyInstallment ? product.monthlyInstallment * (product.installmentMonths || 1) * quantity : product.price * quantity
+    }
+    return product.price * quantity
+  })()
 
   return (
     <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
@@ -117,10 +127,12 @@ export default function ProductDetailPage() {
                       ? 'bg-blue-100 text-blue-800'
                       : product.type === 'sale'
                         ? 'bg-green-100 text-green-800'
-                        : 'bg-purple-100 text-purple-800'
+                        : product.type === 'sale_installment'
+                          ? 'bg-gradient-to-r from-green-100 to-purple-100 text-green-800'
+                          : 'bg-purple-100 text-purple-800'
                   }`}
                 >
-                  {product.type.toUpperCase()}
+                  {product.type === 'sale_installment' ? 'SALE/INSTALLMENT' : product.type.toUpperCase()}
                 </span>
               </div>
               <h1 className="mb-3 sm:mb-4 text-2xl sm:text-3xl md:text-4xl font-bold text-black">{product.title}</h1>
@@ -151,6 +163,84 @@ export default function ProductDetailPage() {
                     <p className="text-xs sm:text-sm text-gray-600">
                       {formatCurrency(product.monthlyInstallment)} / month for {product.installmentMonths} months
                     </p>
+                  )}
+                  {product.type === 'sale_installment' && product.monthlyInstallment && (
+                    <div className="mt-3 sm:mt-4">
+                      <p className="text-xs sm:text-sm font-semibold text-gray-700 mb-3">Choose Payment Option:</p>
+                      <div className="grid gap-3">
+                        {/* One-Time Purchase Option */}
+                        <button
+                          type="button"
+                          onClick={() => setPaymentMethod('sale')}
+                          className={`rounded-lg p-3 sm:p-4 border-2 transition-all duration-200 text-left ${
+                            paymentMethod === 'sale'
+                              ? 'border-green-500 bg-green-50 shadow-md'
+                              : 'border-green-200 bg-green-50/50 hover:border-green-400'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${
+                                paymentMethod === 'sale' ? 'border-green-600 bg-green-600' : 'border-green-400'
+                              }`}>
+                                {paymentMethod === 'sale' && (
+                                  <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                )}
+                              </div>
+                              <div>
+                                <p className="text-sm font-semibold text-green-800">💰 One-Time Purchase</p>
+                                <p className="text-lg sm:text-xl font-bold text-green-700 mt-1">{formatCurrency(product.price)}</p>
+                              </div>
+                            </div>
+                            {paymentMethod === 'sale' && (
+                              <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">Selected</span>
+                            )}
+                          </div>
+                        </button>
+
+                        {/* Installment Plan Option */}
+                        <button
+                          type="button"
+                          onClick={() => setPaymentMethod('installment')}
+                          className={`rounded-lg p-3 sm:p-4 border-2 transition-all duration-200 text-left ${
+                            paymentMethod === 'installment'
+                              ? 'border-purple-500 bg-purple-50 shadow-md'
+                              : 'border-purple-200 bg-purple-50/50 hover:border-purple-400'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${
+                                paymentMethod === 'installment' ? 'border-purple-600 bg-purple-600' : 'border-purple-400'
+                              }`}>
+                                {paymentMethod === 'installment' && (
+                                  <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                )}
+                              </div>
+                              <div>
+                                <p className="text-sm font-semibold text-purple-800">📦 Installment Plan</p>
+                                <p className="text-lg sm:text-xl font-bold text-purple-700 mt-1">
+                                  {formatCurrency(product.monthlyInstallment)} / month
+                                </p>
+                                <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                                  for {product.installmentMonths} months
+                                </p>
+                                <p className="text-xs font-medium text-purple-600 mt-1">
+                                  Total: {formatCurrency(product.monthlyInstallment * (product.installmentMonths || 1))}
+                                </p>
+                              </div>
+                            </div>
+                            {paymentMethod === 'installment' && (
+                              <span className="text-xs font-medium text-purple-600 bg-purple-100 px-2 py-1 rounded-full">Selected</span>
+                            )}
+                          </div>
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
 

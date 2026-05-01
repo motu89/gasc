@@ -118,7 +118,7 @@ export default function ProductForm({
 
       <div className="grid gap-4 md:grid-cols-3">
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-800">Price</label>
+          <label className="mb-2 block text-sm font-medium text-gray-800">Price (PKR)</label>
           <input
             type="number"
             min="1"
@@ -128,6 +128,9 @@ export default function ProductForm({
             placeholder="50000"
             required
           />
+          {formValues.type === 'sale_installment' && (
+            <p className="mt-1 text-xs text-gray-500">Sale price for one-time purchase</p>
+          )}
         </div>
         <div>
           <label className="mb-2 block text-sm font-medium text-gray-800">Type</label>
@@ -159,29 +162,46 @@ export default function ProductForm({
         </div>
       </div>
 
-      {formValues.type === 'installment' && (
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-800">Installment months</label>
-            <input
-              type="number"
-              min="1"
-              value={formValues.installmentMonths}
-              onChange={(event) => updateField('installmentMonths', event.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900"
-              required
-            />
-          </div>
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-800">Monthly installment</label>
-            <input
-              type="number"
-              min="1"
-              value={formValues.monthlyInstallment}
-              onChange={(event) => updateField('monthlyInstallment', event.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900"
-              required
-            />
+      {(formValues.type === 'installment' || formValues.type === 'sale_installment') && (
+        <div className="rounded-lg border-2 border-dashed border-orange-300 bg-orange-50 p-4">
+          <h3 className="mb-3 text-sm font-semibold text-orange-800">
+            {formValues.type === 'sale_installment' 
+              ? '📦 Installment Plan Details (Optional for buyers)'
+              : '📦 Installment Plan Details'
+            }
+          </h3>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-800">Installment Duration (Months)</label>
+              <input
+                type="number"
+                min="1"
+                max="36"
+                value={formValues.installmentMonths}
+                onChange={(event) => updateField('installmentMonths', event.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900"
+                placeholder="e.g., 12"
+                required
+              />
+              <p className="mt-1 text-xs text-gray-500">Number of monthly payments</p>
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-800">Monthly Installment Amount (PKR)</label>
+              <input
+                type="number"
+                min="1"
+                value={formValues.monthlyInstallment}
+                onChange={(event) => updateField('monthlyInstallment', event.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900"
+                placeholder="e.g., 5000"
+                required
+              />
+              {formValues.installmentMonths && formValues.monthlyInstallment && (
+                <p className="mt-1 text-xs font-medium text-green-600">
+                  Total: PKR {(parseInt(formValues.monthlyInstallment) * parseInt(formValues.installmentMonths)).toLocaleString()}
+                </p>
+              )}
+            </div>
           </div>
         </div>
       )}

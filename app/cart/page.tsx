@@ -1,18 +1,37 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { FiShoppingCart, FiTrash2 } from 'react-icons/fi'
 import MarketplaceImage from '@/components/shared/MarketplaceImage'
+import PaymentModal from '@/components/forms/PaymentModal'
+import { apiRequest } from '@/lib/api-client'
 import { formatCurrency, getProductCategoryLabel } from '@/lib/format'
 import { useStore } from '@/lib/store'
 
 export default function CartPage() {
-  const { cart, clearCart, removeFromCart, updateCartItem } = useStore()
+  const { cart, clearCart, removeFromCart, updateCartItem, user, hydrated } = useStore()
+  const router = useRouter()
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [vendorPaymentMethods, setVendorPaymentMethods] = useState({ easyPaisaAccount: '', jazzCashAccount: '' })
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false)
+
+  // Check if all items are from the same vendor
+  const vendorId = cart.length > 0 ? cart[0].product.vendorId : null
+  const vendorEmail = cart.length > 0 ? cart[0].product.vendorEmail : null
+  const vendorName = cart.length > 0 ? cart[0].product.vendorName : null
+  const sameVendor = cart.every(item => item.product.vendorId === vendorId)
 
   const totalAmount = cart.reduce((sum, item) => {
     if (item.product.type === 'rent' && item.rentalDays) {
       return sum + item.product.price * item.rentalDays * item.quantity
+    }
+
+    // For sale_installment products with installment payment, use monthly amount
+    if (item.product.type === 'sale_installment' && item.paymentMethod === 'installment' && item.product.monthlyInstallment) {
+      return sum + item.product.monthlyInstallment * item.quantity
     }
 
     return sum + item.product.price * item.quantity
@@ -24,8 +43,85 @@ export default function CartPage() {
       return
     }
 
-    clearCart()
-    toast.success('Your order request has been placed successfully.')
+    if (!sameVendor) {
+      toast.error('All items in cart must be from the same vendor to place an order.')
+      return
+    }
+
+    // Load vendor payment methods
+    loadVendorPaymentMethods(vendorId!)
+  }
+
+  const loadVendorPaymentMethods = async (vid: string) => {
+    try {
+      // Prefer email-based lookup (more reliable); fall back to userId (_id)
+      let param: string
+      if (vendorEmail && vendorEmail.trim() !== '') {
+        param = `email=${encodeURIComponent(vendorEmail.trim())}`
+      } else {
+        param = `userId=${encodeURIComponent(vid)}`
+      }
+      const response = await apiRequest<{ user: { easyPaisaAccount: string; jazzCashAccount: string } }>(
+        `/api/payment-methods?${param}`
+      )
+      setVendorPaymentMethods(response.user)
+      setShowPaymentModal(true)
+    } catch (error) {
+      toast.error('Unable to load payment methods.')
+    }
+  }
+
+  const handlePaymentSubmit = async (paymentMethod: 'easypaisa' | 'jazzcash', paymentProof: string) => {
+    try {
+      setIsPlacingOrder(true)
+
+      // Prepare order items
+      const orderItems = cart.map(item => ({
+        productId: item.productId,
+        productTitle: item.product.title,
+        productImage: item.product.images[0] || '',
+        quantity: item.quantity,
+        unitPrice: item.product.type === 'rent' && item.rentalDays
+          ? item.product.price * item.rentalDays
+          : item.product.type === 'sale_installment' && item.paymentMethod === 'installment' && item.product.monthlyInstallment
+          ? item.product.monthlyInstallment
+          : item.product.price,
+        totalPrice: item.product.type === 'rent' && item.rentalDays
+          ? item.product.price * item.rentalDays * item.quantity
+          : item.product.type === 'sale_installment' && item.paymentMethod === 'installment' && item.product.monthlyInstallment
+          ? item.product.monthlyInstallment * item.quantity
+          : item.product.price * item.quantity,
+        rentalDays: item.rentalDays,
+        paymentMethod: item.paymentMethod,
+        installmentMonths: item.product.installmentMonths,
+        monthlyInstallment: item.product.monthlyInstallment,
+      }))
+
+      // Place order
+      await apiRequest('/api/orders', {
+        method: 'POST',
+        body: JSON.stringify({
+          items: orderItems,
+          paymentMethod,
+          paymentProof,
+          vendorId,
+          vendorName,
+          userId: user?.id || 'anonymous',
+          userName: user?.name || 'Guest User',
+          userEmail: user?.email || 'guest@example.com',
+        }),
+      })
+
+      // Clear cart and close modal
+      clearCart()
+      setShowPaymentModal(false)
+      toast.success('Order placed successfully! Vendor will review your payment.')
+      router.push('/products')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to place order.')
+    } finally {
+      setIsPlacingOrder(false)
+    }
   }
 
   if (cart.length === 0) {
@@ -65,10 +161,30 @@ export default function CartPage() {
                     <div className="flex-1 min-w-0">
                       <h3 className="mb-1 text-base sm:text-lg font-semibold text-gray-800 truncate">{item.product.title}</h3>
                       <p className="mb-2 text-xs sm:text-sm text-gray-600">{getProductCategoryLabel(item.product.category)}</p>
-                      <p className="text-base sm:text-lg font-bold text-primary-600">
-                        {formatCurrency(item.product.price)}
-                        {item.product.type === 'rent' && ' / day'}
-                      </p>
+                      
+                      {/* Display correct price based on payment method */}
+                      {item.product.type === 'sale_installment' && item.paymentMethod === 'installment' ? (
+                        <div>
+                          <p className="text-base sm:text-lg font-bold text-purple-600">
+                            {formatCurrency(item.product.monthlyInstallment || 0)} / month
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            for {item.product.installmentMonths} months
+                          </p>
+                          <p className="text-xs font-medium text-purple-600">
+                            Total: {formatCurrency((item.product.monthlyInstallment || 0) * (item.product.installmentMonths || 1))}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-base sm:text-lg font-bold text-primary-600">
+                          {formatCurrency(item.product.price)}
+                          {item.product.type === 'rent' && ' / day'}
+                          {item.product.type === 'sale_installment' && (
+                            <span className="ml-2 text-xs font-normal text-green-600">One-Time Purchase</span>
+                          )}
+                        </p>
+                      )}
+                      
                       {item.product.type === 'rent' && (
                         <div className="mt-2">
                           <input
@@ -120,7 +236,36 @@ export default function CartPage() {
           <div className="lg:col-span-1">
             <div className="sticky top-20 sm:top-24 rounded-lg bg-white p-4 sm:p-6 shadow-md">
               <h2 className="mb-3 sm:mb-4 text-lg sm:text-xl font-bold text-black">Order Summary</h2>
-              <div className="mb-3 sm:mb-4 space-y-2 text-sm sm:text-base">
+              
+              {/* Item breakdown */}
+              <div className="mb-4 space-y-2">
+                {cart.map((item) => {
+                  let itemTotal: number
+                  let label: string
+                  
+                  if (item.product.type === 'rent' && item.rentalDays) {
+                    itemTotal = item.product.price * item.rentalDays * item.quantity
+                    label = `${item.product.title} (Rent × ${item.rentalDays} days)`
+                  } else if (item.product.type === 'sale_installment' && item.paymentMethod === 'installment' && item.product.monthlyInstallment) {
+                    itemTotal = item.product.monthlyInstallment * item.quantity
+                    label = `${item.product.title} (Installment)`
+                  } else {
+                    itemTotal = item.product.price * item.quantity
+                    label = item.product.type === 'sale_installment' 
+                      ? `${item.product.title} (One-Time)`
+                      : item.product.title
+                  }
+                  
+                  return (
+                    <div key={item.productId} className="flex justify-between text-sm text-gray-600">
+                      <span className="flex-1 pr-2">{label} × {item.quantity}</span>
+                      <span className="font-medium">{formatCurrency(itemTotal)}</span>
+                    </div>
+                  )
+                })}
+              </div>
+              
+              <div className="mb-3 sm:mb-4 space-y-2 text-sm sm:text-base border-t pt-4">
                 <div className="flex justify-between text-gray-600">
                   <span>Subtotal</span>
                   <span>{formatCurrency(totalAmount)}</span>
@@ -136,14 +281,24 @@ export default function CartPage() {
               </div>
               <button
                 onClick={handleCheckout}
-                className="w-full rounded-lg bg-primary-600 py-2 sm:py-3 font-semibold text-white text-sm sm:text-base transition hover:bg-primary-700"
+                disabled={isPlacingOrder}
+                className="w-full rounded-lg bg-primary-600 py-2 sm:py-3 font-semibold text-white text-sm sm:text-base transition hover:bg-primary-700 disabled:opacity-60"
               >
-                Place Order
+                {isPlacingOrder ? 'Placing Order...' : 'Place Order'}
               </button>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Payment Modal */}
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        onSubmit={handlePaymentSubmit}
+        vendorPaymentMethods={vendorPaymentMethods}
+        totalAmount={totalAmount}
+      />
     </div>
   )
 }
