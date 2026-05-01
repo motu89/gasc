@@ -59,6 +59,7 @@ export async function sendBookingEmails(booking: {
   date: string;
   time: string;
   duration: number;
+  status?: string;
 }) {
   const recipients = [
     booking.userEmail,
@@ -70,9 +71,11 @@ export async function sendBookingEmails(booking: {
     return;
   }
 
+  const statusText = booking.status ? `Booking ${booking.status}` : 'Booking update';
+  
   await sendEmail({
     to: recipients,
-    subject: `Booking update for ${booking.serviceTitle}`,
+    subject: `${statusText} for ${booking.serviceTitle}`,
     html: `
       <h2>${booking.serviceTitle}</h2>
       <p><strong>Date:</strong> ${booking.date}</p>
@@ -82,6 +85,7 @@ export async function sendBookingEmails(booking: {
       <p><strong>Payment status:</strong> ${booking.paymentStatus}</p>
       <p><strong>Total paid now:</strong> ${formatCurrency(booking.totalAmount)}</p>
       <p><strong>Address:</strong> ${booking.userAddress}</p>
+      ${booking.status ? `<p><strong>Booking status:</strong> <span style="color: green; font-weight: bold;">${booking.status.toUpperCase()}</span></p>` : ''}
     `,
   });
 }

@@ -53,6 +53,74 @@ export async function GET(request: NextRequest) {
   }
 }
 
+export async function PATCH(request: NextRequest) {
+  try {
+    await connectToDatabase();
+
+    const payload = await request.json();
+    const { bookingId, status, providerId } = payload;
+
+    if (!bookingId || !status || !providerId) {
+      return NextResponse.json(
+        { error: 'Please provide booking ID, status, and provider ID.' },
+        { status: 400 }
+      );
+    }
+
+    if (!['confirmed', 'cancelled', 'completed'].includes(status)) {
+      return NextResponse.json(
+        { error: 'Invalid status. Use confirmed, cancelled, or completed.' },
+        { status: 400 }
+      );
+    }
+
+    const booking = await BookingModel.findById(bookingId);
+
+    if (!booking) {
+      return NextResponse.json({ error: 'Booking not found.' }, { status: 404 });
+    }
+
+    // Verify the provider owns this booking
+    if (booking.providerId !== providerId) {
+      return NextResponse.json(
+        { error: 'You are not authorized to update this booking.' },
+        { status: 403 }
+      );
+    }
+
+    // Update booking status
+    booking.status = status;
+    await booking.save();
+
+    // Send notification emails
+    await sendBookingEmails({
+      serviceTitle: booking.serviceTitle,
+      userEmail: booking.userEmail,
+      providerEmail: booking.providerEmail,
+      userAddress: booking.userAddress,
+      paymentMethod: booking.paymentMethod,
+      paymentStatus: booking.paymentStatus,
+      totalAmount: booking.totalAmount,
+      date: booking.date,
+      time: booking.time,
+      duration: booking.duration,
+      status: booking.status,
+    });
+
+    return NextResponse.json({
+      message: `Booking ${status} successfully.`,
+      booking: {
+        id: booking._id.toString(),
+        status: booking.status,
+        paymentStatus: booking.paymentStatus,
+      },
+    });
+  } catch (error) {
+    console.error('Update booking error:', error);
+    return NextResponse.json({ error: 'Unable to update booking.' }, { status: 500 });
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();

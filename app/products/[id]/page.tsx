@@ -309,9 +309,8 @@ export default function ProductDetailPage() {
                   <div>
                     <h4 className="mb-1 text-sm font-semibold text-blue-900">Cancellation Policy</h4>
                     <p className="text-xs text-blue-800">
-                      You can cancel this order within <span className="font-bold">30 minutes</span> of purchase. 
-                      A refund will be processed by the admin with a <span className="font-bold">5% cancellation fee</span>. 
-                      The remaining amount (95%) will be refunded to your original payment method within 3-5 business days.
+                      You may cancel your booking within 30 minutes of confirmation without any charges, and the booking will be canceled accordingly.<br />
+                      If a booking is canceled after 30 minutes of confirmation, a 10% cancellation fee will be applied. In such cases, the paid amount will not be refunded.
                     </p>
                   </div>
                 </div>

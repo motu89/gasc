@@ -18,15 +18,15 @@ export default function FeaturedProducts() {
   return (
     <section id="products-section" className="bg-gray-50 py-8 sm:py-12 md:py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mb-6 sm:mb-8 md:mb-12 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+        <div className="mb-6 sm:mb-8 md:mb-12 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 px-2 sm:px-0">
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 text-center sm:text-left">Featured Products</h2>
-          <Link href="/products" className="font-semibold text-primary-600 hover:text-primary-700">
+          <Link href="/products" className="font-semibold text-primary-600 hover:text-primary-700 text-sm sm:text-base">
             View All
           </Link>
         </div>
 
         {products.length > 0 ? (
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6 px-1 sm:px-0">
             {products.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}

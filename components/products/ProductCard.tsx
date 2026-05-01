@@ -51,18 +51,18 @@ export default function ProductCard({ product }: ProductCardProps) {
             </div>
           )}
         </div>
-        <div className="p-3 sm:p-5">
-          <h3 className="mb-1 sm:mb-2 text-sm sm:text-xl font-semibold text-gray-800 transition group-hover:text-primary-600 line-clamp-1">
+        <div className="p-2 sm:p-3 md:p-5">
+          <h3 className="mb-1 sm:mb-2 text-sm sm:text-base md:text-xl font-semibold text-gray-800 transition group-hover:text-primary-600 line-clamp-1">
             {product.title}
           </h3>
-          <p className="mb-2 sm:mb-3 line-clamp-2 text-xs sm:text-sm text-gray-600 hidden sm:block">{product.description}</p>
+          <p className="mb-2 line-clamp-2 text-xs sm:text-sm text-gray-600 hidden sm:block">{product.description}</p>
           <div className="mb-2 sm:mb-3 flex items-center text-xs sm:text-sm text-gray-500">
             <FiMapPin className="mr-1 h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
             <span className="truncate">{product.location}</span>
           </div>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-base sm:text-2xl font-bold text-primary-600">
+              <p className="text-sm sm:text-lg md:text-2xl font-bold text-primary-600">
                 {formatCurrency(product.price)}
               </p>
               {product.availableOnInstallment && product.monthlyInstallment && (

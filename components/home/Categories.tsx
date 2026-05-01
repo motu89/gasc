@@ -16,8 +16,8 @@ export default function Categories() {
   return (
     <section className="bg-white py-8 sm:py-12 md:py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <h2 className="mb-6 sm:mb-8 md:mb-12 text-center text-2xl sm:text-3xl font-bold text-black">Browse by Category</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 md:gap-6">
+        <h2 className="mb-6 sm:mb-8 md:mb-12 text-center text-2xl sm:text-3xl font-bold text-black px-2 sm:px-0">Browse by Category</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 md:gap-6 px-1 sm:px-0">
           {categories.map((category) => {
             const Icon = category.icon
 

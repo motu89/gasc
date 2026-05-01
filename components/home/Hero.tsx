@@ -58,20 +58,20 @@ export default function Hero() {
             Rent, Buy & Book Services
             <span className="block text-primary-200 mt-2">All in One Place</span>
           </h1>
-          <p className="text-base sm:text-lg md:text-xl mb-6 sm:mb-8 text-white/90 drop-shadow-md px-2">
+          <p className="text-base sm:text-lg md:text-xl mb-6 sm:mb-8 text-white/90 drop-shadow-md">
             Discover products for rent, sale, or installment. Book skilled professionals for your needs.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4 sm:px-0">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
             <Link
               href="/products"
-              className="bg-white text-primary-600 px-6 sm:px-8 py-3 rounded-lg font-semibold hover:bg-primary-50 transition flex items-center justify-center gap-2 text-sm sm:text-base"
+              className="bg-white text-primary-600 px-6 sm:px-8 py-3 rounded-lg font-semibold hover:bg-primary-50 transition flex items-center justify-center gap-2 text-sm sm:text-base whitespace-nowrap"
             >
               <FiShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" />
               Browse Products
             </Link>
             <Link
               href="/services"
-              className="bg-primary-500 text-white px-6 sm:px-8 py-3 rounded-lg font-semibold hover:bg-primary-400 transition flex items-center justify-center gap-2 border-2 border-white text-sm sm:text-base"
+              className="bg-primary-500 text-white px-6 sm:px-8 py-3 rounded-lg font-semibold hover:bg-primary-400 transition flex items-center justify-center gap-2 border-2 border-white text-sm sm:text-base whitespace-nowrap"
             >
               <FiTool className="w-4 h-4 sm:w-5 sm:h-5" />
               Book Services
@@ -80,7 +80,7 @@ export default function Hero() {
         </div>
 
         {/* Features */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6 md:gap-8 mt-8 sm:mt-12 md:mt-16 px-2 sm:px-0">
+        <div className="grid grid-cols-2 md:grid-cols-2 gap-3 sm:gap-6 md:gap-8 mt-8 sm:mt-12 md:mt-16 px-2 sm:px-0 max-w-3xl">
           <Link href="/#products-section" className="bg-white/20 backdrop-blur-md rounded-lg p-3 sm:p-6 text-center border border-white/30 hover:bg-white/30 transition cursor-pointer">
             <FiShoppingBag className="w-7 h-7 sm:w-12 sm:h-12 mx-auto mb-2 sm:mb-4 text-white" />
             <h3 className="text-sm sm:text-xl font-semibold mb-1 sm:mb-2 text-white">Rent & Buy</h3>
@@ -93,13 +93,6 @@ export default function Hero() {
             <h3 className="text-sm sm:text-xl font-semibold mb-1 sm:mb-2 text-white">Skilled Services</h3>
             <p className="text-xs sm:text-base text-white/90 hidden sm:block">
               Book professional services from verified providers
-            </p>
-          </Link>
-          <Link href="/#services-section" className="bg-white/20 backdrop-blur-md rounded-lg p-3 sm:p-6 text-center border border-white/30 hover:bg-white/30 transition cursor-pointer col-span-2 md:col-span-1">
-            <FiCalendar className="w-7 h-7 sm:w-12 sm:h-12 mx-auto mb-2 sm:mb-4 text-white" />
-            <h3 className="text-sm sm:text-xl font-semibold mb-1 sm:mb-2 text-white">Easy Booking</h3>
-            <p className="text-xs sm:text-base text-white/90 hidden sm:block">
-              Schedule services with our simple booking system
             </p>
           </Link>
         </div>
