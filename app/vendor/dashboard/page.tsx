@@ -3,20 +3,21 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
-import { FiEdit, FiPackage, FiPlus, FiTrash2, FiTrendingUp, FiDollarSign, FiUpload, FiShoppingBag, FiEye } from 'react-icons/fi'
+import { FiEdit, FiEye, FiPackage, FiPlus, FiShoppingBag, FiTrash2, FiTrendingUp, FiX } from 'react-icons/fi'
 import ProductForm from '@/components/forms/ProductForm'
 import DashboardSidebar from '@/components/layout/DashboardSidebar'
 import MarketplaceImage from '@/components/shared/MarketplaceImage'
 import { apiRequest } from '@/lib/api-client'
 import { formatCurrency, getProductCategoryLabel, getProductTypeLabel, formatDate } from '@/lib/format'
 import { useStore } from '@/lib/store'
-import { Product, Order } from '@/types'
+import { Order, Product } from '@/types'
 
 type ProductFormValues = {
   title: string
   description: string
   price: string
-  type: Product['type']
+  type: 'rent' | 'sale'
+  availableOnInstallment: boolean
   category: Product['category']
   images: string[]
   location: string
@@ -33,10 +34,6 @@ export default function VendorDashboard() {
   const [saving, setSaving] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
-  const [showPaymentForm, setShowPaymentForm] = useState(false)
-  const [paymentMethods, setPaymentMethods] = useState({ easyPaisaAccount: '', jazzCashAccount: '' })
-  const [paymentSaving, setPaymentSaving] = useState(false)
-  const [paymentMethodsLoaded, setPaymentMethodsLoaded] = useState(false)
   const [orders, setOrders] = useState<Order[]>([])
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [showOrderDetails, setShowOrderDetails] = useState(false)
@@ -47,16 +44,11 @@ export default function VendorDashboard() {
 
     setLoading(true)
     try {
-      const [productsResponse, paymentResponse, ordersResponse] = await Promise.all([
+      const [productsResponse, ordersResponse] = await Promise.all([
         apiRequest<{ products: Product[] }>(`/api/products?vendorId=${user.id}`),
-        apiRequest<{ user: { easyPaisaAccount: string; jazzCashAccount: string } }>(`/api/payment-methods?email=${user.email}`),
         apiRequest<{ orders: Order[] }>(`/api/orders?vendorId=${user.id}`),
       ])
       setProducts(productsResponse.products)
-      if (!paymentMethodsLoaded) {
-        setPaymentMethods(paymentResponse.user)
-        setPaymentMethodsLoaded(true)
-      }
       setOrders(ordersResponse.orders)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Unable to load products.')
@@ -135,29 +127,6 @@ export default function VendorDashboard() {
     }
   }
 
-  const handlePaymentMethodSubmit = async () => {
-    if (!paymentMethods.easyPaisaAccount && !paymentMethods.jazzCashAccount) {
-      toast.error('Please add at least one payment method.')
-      return
-    }
-
-    try {
-      setPaymentSaving(true)
-      await apiRequest('/api/payment-methods', {
-        method: 'PUT',
-        body: JSON.stringify({ email: user.email, ...paymentMethods }),
-      })
-      toast.success('Payment methods updated successfully.')
-      setShowPaymentForm(false)
-      setPaymentMethodsLoaded(false)
-      await loadProducts()
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Unable to update payment methods.')
-    } finally {
-      setPaymentSaving(false)
-    }
-  }
-
   const handleConfirmOrder = async (orderId: string) => {
     try {
       setConfirmingOrder(true)
@@ -179,381 +148,66 @@ export default function VendorDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <DashboardSidebar role={user.role} />
-      <div className="ml-0 lg:ml-64 min-h-screen p-4 sm:p-6 md:p-8 pt-16 lg:pt-8">
-        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+      <div className="ml-0 min-h-screen p-4 pt-16 sm:p-6 md:p-8 lg:ml-64 lg:pt-8">
+        <div className="mb-6 flex flex-col items-start justify-between gap-3 sm:mb-8 sm:flex-row sm:items-center sm:gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">Vendor Dashboard</h1>
-            <p className="mt-2 text-sm sm:text-base text-gray-600">Manage your product listings and keep them marketplace-ready.</p>
+            <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl md:text-4xl">Vendor Dashboard</h1>
+            <p className="mt-2 text-sm text-gray-600 sm:text-base">Manage products and track checkout activity from one place.</p>
           </div>
           <button
             onClick={() => {
               setEditingProduct(null)
               setShowForm((current) => !current)
             }}
-            className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base text-white transition hover:bg-primary-700"
+            className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm text-white transition hover:bg-primary-700 sm:px-6 sm:py-3 sm:text-base"
           >
             <FiPlus className="h-4 w-4 sm:h-5 sm:w-5" />
             {showForm && !editingProduct ? 'Hide Form' : 'Add Product'}
           </button>
         </div>
 
-        <div className="mb-6 sm:mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-          <div className="rounded-xl bg-white p-4 sm:p-6 shadow-md">
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:mb-8 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+          <div className="rounded-xl bg-white p-4 shadow-md sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs sm:text-sm text-gray-600">Total Products</p>
-                <p className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800">{products.length}</p>
+                <p className="text-xs text-gray-600 sm:text-sm">Total Products</p>
+                <p className="text-xl font-bold text-gray-800 sm:text-2xl md:text-3xl">{products.length}</p>
               </div>
-              <FiPackage className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-primary-600" />
+              <FiPackage className="h-8 w-8 text-primary-600 sm:h-10 sm:w-10 md:h-12 md:w-12" />
             </div>
           </div>
-          <div className="rounded-xl bg-white p-4 sm:p-6 shadow-md">
+          <div className="rounded-xl bg-white p-4 shadow-md sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs sm:text-sm text-gray-600">Active Products</p>
-                <p className="text-xl sm:text-2xl md:text-3xl font-bold text-green-600">{activeProducts}</p>
+                <p className="text-xs text-gray-600 sm:text-sm">Active Products</p>
+                <p className="text-xl font-bold text-green-600 sm:text-2xl md:text-3xl">{activeProducts}</p>
               </div>
-              <FiTrendingUp className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-green-600" />
+              <FiTrendingUp className="h-8 w-8 text-green-600 sm:h-10 sm:w-10 md:h-12 md:w-12" />
             </div>
           </div>
-          <div className="rounded-xl bg-white p-4 sm:p-6 shadow-md">
+          <div className="rounded-xl bg-white p-4 shadow-md sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs sm:text-sm text-gray-600">Waiting Approval</p>
-                <p className="text-xl sm:text-2xl md:text-3xl font-bold text-yellow-600">{pendingProducts}</p>
+                <p className="text-xs text-gray-600 sm:text-sm">Waiting Approval</p>
+                <p className="text-xl font-bold text-yellow-600 sm:text-2xl md:text-3xl">{pendingProducts}</p>
               </div>
-              <FiTrendingUp className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-yellow-500" />
+              <FiTrendingUp className="h-8 w-8 text-yellow-500 sm:h-10 sm:w-10 md:h-12 md:w-12" />
             </div>
           </div>
-          <div className="rounded-xl bg-white p-4 sm:p-6 shadow-md">
+          <div className="rounded-xl bg-white p-4 shadow-md sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs sm:text-sm text-gray-600">Total Listing Value</p>
-                <p className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800">{formatCurrency(totalValue)}</p>
+                <p className="text-xs text-gray-600 sm:text-sm">Total Listing Value</p>
+                <p className="text-xl font-bold text-gray-800 sm:text-2xl md:text-3xl">{formatCurrency(totalValue)}</p>
               </div>
-              <FiPackage className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-blue-600" />
+              <FiPackage className="h-8 w-8 text-blue-600 sm:h-10 sm:w-10 md:h-12 md:w-12" />
             </div>
           </div>
         </div>
-
-        {/* Payment Methods Section */}
-        <div className="mb-6 sm:mb-8 rounded-xl bg-white p-4 sm:p-6 shadow-md">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Payment Methods</h2>
-              <p className="mt-1 text-xs sm:text-sm text-gray-600">Add your EasyPaisa and JazzCash account numbers to receive payments</p>
-            </div>
-            <button
-              onClick={() => setShowPaymentForm(!showPaymentForm)}
-              className="flex items-center gap-2 rounded-lg bg-green-600 px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base text-white transition hover:bg-green-700"
-            >
-              <FiDollarSign className="h-4 w-4 sm:h-5 sm:w-5" />
-              {showPaymentForm ? 'Cancel' : 'Add Payment Method'}
-            </button>
-          </div>
-
-          {showPaymentForm ? (
-            <div className="rounded-lg border border-gray-200 p-4 sm:p-6">
-              <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
-                {/* EasyPaisa */}
-                <div>
-                  <div className="mb-2">
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-                        <span className="text-lg">💳</span>
-                      </div>
-                      <span className="font-semibold text-sm text-gray-900">EasyPaisa</span>
-                    </div>
-                    <span className="text-xs text-gray-600">Enter your EasyPaisa account number</span>
-                  </div>
-                  <input
-                    type="text"
-                    value={paymentMethods.easyPaisaAccount}
-                    onChange={(e) => setPaymentMethods(prev => ({ ...prev, easyPaisaAccount: e.target.value }))}
-                    placeholder="03XX-XXXXXXX"
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm sm:text-base text-gray-900 focus:ring-2 focus:ring-green-500"
-                  />
-                </div>
-
-                {/* JazzCash */}
-                <div>
-                  <div className="mb-2">
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="h-8 w-8 rounded-full bg-red-100 flex items-center justify-center">
-                        <span className="text-lg">💰</span>
-                      </div>
-                      <span className="font-semibold text-sm text-gray-900">JazzCash</span>
-                    </div>
-                    <span className="text-xs text-gray-600">Enter your JazzCash account number</span>
-                  </div>
-                  <input
-                    type="text"
-                    value={paymentMethods.jazzCashAccount}
-                    onChange={(e) => setPaymentMethods(prev => ({ ...prev, jazzCashAccount: e.target.value }))}
-                    placeholder="03XX-XXXXXXX"
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm sm:text-base text-gray-900 focus:ring-2 focus:ring-red-500"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-6 flex gap-3">
-                <button
-                  onClick={handlePaymentMethodSubmit}
-                  disabled={paymentSaving}
-                  className="flex items-center gap-2 rounded-lg bg-primary-600 px-6 py-2.5 text-sm sm:text-base text-white transition hover:bg-primary-700 disabled:opacity-60"
-                >
-                  <FiUpload className="h-4 w-4" />
-                  {paymentSaving ? 'Saving...' : 'Save Payment Methods'}
-                </button>
-                <button
-                  onClick={() => setShowPaymentForm(false)}
-                  className="rounded-lg border border-gray-300 px-6 py-2.5 text-sm sm:text-base text-gray-700 transition hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
-              <div className="rounded-lg border border-gray-200 p-4">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                    <span className="text-2xl">💳</span>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">EasyPaisa</p>
-                    <p className="text-xs text-gray-600">Mobile Account</p>
-                  </div>
-                </div>
-                {paymentMethods.easyPaisaAccount ? (
-                  <p className="text-lg font-mono font-bold text-green-700">{paymentMethods.easyPaisaAccount}</p>
-                ) : (
-                  <p className="text-sm text-gray-500">Not added yet</p>
-                )}
-              </div>
-
-              <div className="rounded-lg border border-gray-200 p-4">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
-                    <span className="text-2xl">💰</span>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">JazzCash</p>
-                    <p className="text-xs text-gray-600">Mobile Account</p>
-                  </div>
-                </div>
-                {paymentMethods.jazzCashAccount ? (
-                  <p className="text-lg font-mono font-bold text-red-700">{paymentMethods.jazzCashAccount}</p>
-                ) : (
-                  <p className="text-sm text-gray-500">Not added yet</p>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Orders Section */}
-        <div className="mb-6 sm:mb-8 rounded-xl bg-white p-4 sm:p-6 shadow-md">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Customer Orders</h2>
-              <p className="mt-1 text-xs sm:text-sm text-gray-600">View orders and payment proofs from customers</p>
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="text-sm sm:text-base text-gray-600">Loading orders...</div>
-          ) : orders.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-gray-300 p-6 sm:p-8 text-center text-sm sm:text-base text-gray-600">
-              No orders yet.
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {orders.map((order) => (
-                <div key={order.id} className="rounded-xl border border-gray-200 p-4">
-                  <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
-                    <div className="flex-1">
-                      <div className="flex flex-wrap items-center gap-2 mb-2">
-                        <h3 className="text-base sm:text-lg font-semibold text-gray-900">Order #{order.orderNumber.slice(-8)}</h3>
-                        <span className={`rounded-full px-2 sm:px-3 py-1 text-xs font-semibold ${
-                          order.status === 'confirmed' ? 'bg-green-100 text-green-800'
-                          : order.status === 'pending' ? 'bg-yellow-100 text-yellow-800'
-                          : order.status === 'shipped' ? 'bg-blue-100 text-blue-800'
-                          : order.status === 'delivered' ? 'bg-purple-100 text-purple-800'
-                          : 'bg-gray-200 text-gray-700'
-                        }`}>
-                          {order.status}
-                        </span>
-                      </div>
-                      <p className="text-xs sm:text-sm text-gray-600 mb-1">Customer: {order.userName}</p>
-                      <p className="text-xs sm:text-sm text-gray-600 mb-1">Email: {order.userEmail}</p>
-                      <p className="text-xs sm:text-sm text-gray-600">Date: {formatDate(order.createdAt)}</p>
-                      <div className="mt-2 rounded-lg bg-gray-50 p-3">
-                        <p className="text-xs font-medium text-gray-700 mb-1">Items:</p>
-                        {order.items.map((item, index) => (
-                          <p key={index} className="text-xs text-gray-600">
-                            {item.productTitle} x {item.quantity} - {formatCurrency(item.totalPrice)}
-                          </p>
-                        ))}
-                      </div>
-                      <div className="mt-3 flex items-center gap-4">
-                        <p className="text-base sm:text-lg font-bold text-primary-600">Total: {formatCurrency(order.totalAmount)}</p>
-                        <span className={`rounded-full px-2 sm:px-3 py-1 text-xs font-semibold ${
-                          order.paymentMethod === 'easypaisa' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                          {order.paymentMethod === 'easypaisa' ? '💳 EasyPaisa' : '💰 JazzCash'}
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setSelectedOrder(order)
-                        setShowOrderDetails(true)
-                      }}
-                      className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm text-white transition hover:bg-primary-700"
-                    >
-                      <FiEye className="h-4 w-4" />
-                      View Payment Proof
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Order Details Modal */}
-        {showOrderDetails && selectedOrder && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <div className="relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl max-h-[90vh] overflow-y-auto">
-              <button
-                onClick={() => {
-                  setShowOrderDetails(false)
-                  setSelectedOrder(null)
-                }}
-                className="absolute right-4 top-4 rounded-full p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition"
-              >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h2 className="text-xl font-bold text-gray-900">Order Details</h2>
-                <p className="mt-1 text-sm text-gray-600">Order #{selectedOrder.orderNumber.slice(-8)}</p>
-              </div>
-
-              <div className="px-6 py-6 space-y-6">
-                {/* Customer Info */}
-                <div className="rounded-lg bg-gray-50 p-4">
-                  <h3 className="font-semibold text-gray-900 mb-2">Customer Information</h3>
-                  <p className="text-sm text-gray-600">Name: {selectedOrder.userName}</p>
-                  <p className="text-sm text-gray-600">Email: {selectedOrder.userEmail}</p>
-                </div>
-
-                {/* Order Items */}
-                <div className="rounded-lg bg-gray-50 p-4">
-                  <h3 className="font-semibold text-gray-900 mb-2">Order Items</h3>
-                  {selectedOrder.items.map((item, index) => (
-                    <div key={index} className="flex items-center gap-3 mb-3 last:mb-0">
-                      <div className="h-16 w-16 rounded-lg bg-gray-200 flex items-center justify-center">
-                        <FiShoppingBag className="h-6 w-6 text-gray-600" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900">{item.productTitle}</p>
-                        <p className="text-xs text-gray-600">Quantity: {item.quantity}</p>
-                      </div>
-                      <p className="text-sm font-bold text-gray-900">{formatCurrency(item.totalPrice)}</p>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Payment Info */}
-                <div className="rounded-lg bg-gray-50 p-4">
-                  <h3 className="font-semibold text-gray-900 mb-2">Payment Information</h3>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Payment Method:</span>
-                      <span className="font-medium">
-                        {selectedOrder.paymentMethod === 'easypaisa' ? '💳 EasyPaisa' : '💰 JazzCash'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Total Amount:</span>
-                      <span className="font-bold text-primary-600">{formatCurrency(selectedOrder.totalAmount)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Status:</span>
-                      <span className="font-medium capitalize">{selectedOrder.status}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Payment Proof */}
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Payment Proof Screenshot</h3>
-                  <div className="rounded-lg border border-gray-200 overflow-hidden">
-                    <img
-                      src={selectedOrder.paymentProof}
-                      alt="Payment proof"
-                      className="w-full h-auto max-h-96 object-contain bg-gray-50"
-                    />
-                  </div>
-                  <p className="mt-2 text-xs text-gray-600 text-center">
-                    Verify the payment screenshot before confirming the order
-                  </p>
-                </div>
-
-                {/* Confirm Order Action */}
-                {selectedOrder.status === 'pending' && (
-                  <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-                    <p className="text-sm text-green-800 mb-3 font-medium">
-                      ✅ After verifying the payment proof above, confirm this order to notify the customer.
-                    </p>
-                    <button
-                      onClick={() => handleConfirmOrder(selectedOrder.id)}
-                      disabled={confirmingOrder}
-                      className="w-full rounded-lg bg-green-600 py-3 font-semibold text-white transition hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      {confirmingOrder ? (
-                        <>
-                          <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                          </svg>
-                          Confirming...
-                        </>
-                      ) : (
-                        '✓ Confirm Order'
-                      )}
-                    </button>
-                  </div>
-                )}
-                {selectedOrder.status !== 'pending' && (
-                  <div className={`rounded-lg border p-4 text-center ${
-                    selectedOrder.status === 'confirmed' ? 'border-green-200 bg-green-50'
-                    : selectedOrder.status === 'shipped' ? 'border-blue-200 bg-blue-50'
-                    : selectedOrder.status === 'delivered' ? 'border-purple-200 bg-purple-50'
-                    : 'border-gray-200 bg-gray-50'
-                  }`}>
-                    <p className={`text-sm font-semibold capitalize ${
-                      selectedOrder.status === 'confirmed' ? 'text-green-800'
-                      : selectedOrder.status === 'shipped' ? 'text-blue-800'
-                      : selectedOrder.status === 'delivered' ? 'text-purple-800'
-                      : 'text-gray-700'
-                    }`}>
-                      Order is {selectedOrder.status}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
 
         {(showForm || editingProduct) && (
-          <div className="mb-6 sm:mb-8 rounded-xl bg-white p-4 sm:p-6 shadow-md">
-            <h2 className="mb-4 text-xl sm:text-2xl font-bold text-gray-900">
+          <div className="mb-6 rounded-xl bg-white p-4 shadow-md sm:mb-8 sm:p-6">
+            <h2 className="mb-4 text-xl font-bold text-gray-900 sm:text-2xl">
               {editingProduct ? 'Edit Product' : 'Add New Product'}
             </h2>
             <ProductForm
@@ -568,82 +222,272 @@ export default function VendorDashboard() {
           </div>
         )}
 
-        <div className="rounded-xl bg-white p-4 sm:p-6 shadow-md">
-          <h2 className="mb-4 text-xl sm:text-2xl font-bold text-gray-900">My Products</h2>
-          <div className="mb-4 rounded-xl border border-yellow-200 bg-yellow-50 p-3 sm:p-4 text-xs sm:text-sm text-yellow-900">
-            When you add or update a product, you have to wait for the admin approval before it shows to users.
+        <div className="grid grid-cols-1 gap-4 md:gap-8 xl:grid-cols-2 sm:gap-6">
+          <div className="rounded-xl bg-white p-4 shadow-md sm:p-6">
+            <h2 className="mb-4 text-xl font-bold text-gray-900 sm:text-2xl">My Products</h2>
+            <div className="mb-4 rounded-xl border border-yellow-200 bg-yellow-50 p-3 text-xs text-yellow-900 sm:p-4 sm:text-sm">
+              When you add or update a product, you have to wait for the admin approval before it shows to users.
+            </div>
+
+            {loading ? (
+              <div className="text-sm text-gray-600 sm:text-base">Loading products...</div>
+            ) : products.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-600 sm:p-8 sm:text-base">
+                No products added yet.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {products.map((product) => (
+                  <div key={product.id} className="rounded-xl border border-gray-200 p-3 sm:p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
+                      <MarketplaceImage
+                        src={product.images[0]}
+                        alt={product.title}
+                        fallbackLabel={product.title}
+                        className="h-20 w-20 rounded-lg sm:h-24 sm:w-24"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="truncate text-sm font-semibold text-gray-900 sm:text-base md:text-lg">{product.title}</h3>
+                          <span className="rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700">
+                            {getProductTypeLabel(product.type)}
+                          </span>
+                          {product.availableOnInstallment && (
+                            <span className="rounded-full bg-purple-50 px-3 py-1 text-xs font-semibold text-purple-700">
+                              Installment
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-1 text-xs text-gray-600 sm:text-sm">
+                          {getProductCategoryLabel(product.category)} - {product.location}
+                        </p>
+                        <p className="mt-2 text-sm font-bold text-primary-600 sm:text-base">
+                          {formatCurrency(product.price)}
+                          {product.type === 'rent' && ' / day'}
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                            product.available ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700'
+                          }`}>
+                            {product.available ? 'Available' : 'Hidden'}
+                          </span>
+                          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                            product.approved ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {product.approved ? 'Approved' : 'Pending Approval'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 self-end sm:self-center">
+                        <button
+                          onClick={() => {
+                            setEditingProduct(product)
+                            setShowForm(true)
+                          }}
+                          className="rounded-lg border border-blue-200 p-2 text-blue-600 transition hover:bg-blue-50 sm:p-3"
+                        >
+                          <FiEdit className="h-4 w-4 sm:h-5 sm:w-5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(product.id)}
+                          className="rounded-lg border border-red-200 p-2 text-red-600 transition hover:bg-red-50 sm:p-3"
+                        >
+                          <FiTrash2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {loading ? (
-            <div className="text-sm sm:text-base text-gray-600">Loading products...</div>
-          ) : products.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-gray-300 p-6 sm:p-8 text-center text-sm sm:text-base text-gray-600">
-              No products added yet.
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {products.map((product) => (
-                <div key={product.id} className="flex flex-col gap-3 sm:gap-4 rounded-xl border border-gray-200 p-3 sm:p-4 lg:flex-row lg:items-center">
-                  <MarketplaceImage
-                    src={product.images[0]}
-                    alt={product.title}
-                    fallbackLabel={product.title}
-                    className="h-24 sm:h-28 w-full rounded-lg lg:w-36"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 truncate">{product.title}</h3>
-                      <span className="rounded-full bg-primary-50 px-2 sm:px-3 py-1 text-xs font-semibold text-primary-700">
-                        {getProductTypeLabel(product.type)}
-                      </span>
-                      <span
-                        className={`rounded-full px-2 sm:px-3 py-1 text-xs font-semibold ${
-                          product.available ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700'
-                        }`}
-                      >
-                        {product.available ? 'Available' : 'Hidden'}
-                      </span>
-                      <span
-                        className={`rounded-full px-2 sm:px-3 py-1 text-xs font-semibold ${
-                          product.approved ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                        }`}
-                      >
-                        {product.approved ? 'Approved' : 'Pending Approval'}
-                      </span>
+          <div className="rounded-xl bg-white p-4 shadow-md sm:p-6">
+            <h2 className="mb-1 text-xl font-bold text-gray-900 sm:text-2xl">Customer Orders</h2>
+            <p className="mb-4 text-xs text-gray-500 sm:text-sm">Order summaries with payment status, address, and rental details</p>
+
+            {loading ? (
+              <div className="text-sm text-gray-600 sm:text-base">Loading orders...</div>
+            ) : orders.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-600 sm:p-8 sm:text-base">
+                No orders yet.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {orders.map((order) => (
+                  <div key={order.id} className="rounded-xl border border-gray-200 p-3 sm:p-4">
+                    <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:gap-4">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="truncate text-sm font-semibold text-gray-900 sm:text-base">
+                          Order #{order.orderNumber.slice(-8)}
+                        </h3>
+                        <p className="truncate text-xs text-gray-600 sm:text-sm">Customer: {order.userName}</p>
+                        <p className="mt-1 text-xs text-gray-600 sm:text-sm">{formatDate(order.createdAt)}</p>
+                        <p className="text-xs text-gray-600 sm:text-sm">Address: {order.shippingAddress}</p>
+                        <div className="mt-2 space-y-1">
+                          <p className="text-xs text-gray-700 sm:text-sm">
+                            <span className="font-medium">Items:</span> {order.items.length} product(s)
+                          </p>
+                          <p className="text-xs font-semibold text-primary-600 sm:text-sm">
+                            Total: {formatCurrency(order.totalAmount)}
+                          </p>
+                          <p className="text-xs text-gray-700 sm:text-sm">
+                            Payment {order.paymentStatus} via {order.paymentMethod}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-2">
+                        <div className="flex flex-wrap gap-1 justify-end">
+                          <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ${
+                            order.status === 'confirmed' ? 'bg-green-100 text-green-800'
+                            : order.status === 'pending' ? 'bg-yellow-100 text-yellow-800'
+                            : order.status === 'shipped' ? 'bg-blue-100 text-blue-800'
+                            : order.status === 'delivered' ? 'bg-purple-100 text-purple-800'
+                            : 'bg-gray-200 text-gray-700'
+                          }`}>
+                            {order.status}
+                          </span>
+                          <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ${
+                            order.paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-orange-100 text-orange-800'
+                          }`}>
+                            {order.paymentStatus}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setSelectedOrder(order)
+                            setShowOrderDetails(true)
+                          }}
+                          className="flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary-600 px-3 py-1.5 text-xs text-white transition hover:bg-primary-700 sm:text-sm"
+                        >
+                          <FiEye className="h-3.5 w-3.5" />
+                          View Details
+                        </button>
+                      </div>
                     </div>
-                    <p className="mt-1 text-xs sm:text-sm text-gray-600">
-                      {getProductCategoryLabel(product.category)} - {product.location}
-                    </p>
-                    <p className="mt-2 text-base sm:text-lg font-bold text-primary-600">{formatCurrency(product.price)}</p>
-                    {!product.approved && (
-                      <p className="mt-2 text-xs sm:text-sm font-medium text-yellow-700">
-                        This product will be visible to users after admin approval.
-                      </p>
-                    )}
                   </div>
-                  <div className="flex gap-2 self-end sm:self-center">
-                    <button
-                      onClick={() => {
-                        setEditingProduct(product)
-                        setShowForm(true)
-                      }}
-                      className="rounded-lg border border-blue-200 p-2 sm:p-3 text-blue-600 transition hover:bg-blue-50"
-                    >
-                      <FiEdit className="h-4 w-4 sm:h-5 sm:w-5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(product.id)}
-                      className="rounded-lg border border-red-200 p-2 sm:p-3 text-red-600 transition hover:bg-red-50"
-                    >
-                      <FiTrash2 className="h-4 w-4 sm:h-5 sm:w-5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
+      {showOrderDetails && selectedOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+            <button
+              onClick={() => {
+                setShowOrderDetails(false)
+                setSelectedOrder(null)
+              }}
+              className="absolute right-4 top-4 rounded-full p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+            >
+              <FiX className="h-5 w-5" />
+            </button>
+
+            <div className="border-b border-gray-200 px-6 py-4">
+              <h2 className="text-xl font-bold text-gray-900">Order Details</h2>
+              <p className="mt-1 text-sm text-gray-600">Order #{selectedOrder.orderNumber.slice(-8)}</p>
+            </div>
+
+            <div className="space-y-6 px-6 py-6">
+              <div className="rounded-lg bg-gray-50 p-4">
+                <h3 className="mb-2 font-semibold text-gray-900">Customer Information</h3>
+                <p className="text-sm text-gray-600">Name: {selectedOrder.userName}</p>
+                <p className="text-sm text-gray-600">Email: {selectedOrder.userEmail}</p>
+                <p className="text-sm text-gray-600">Address: {selectedOrder.shippingAddress}</p>
+              </div>
+
+              <div className="rounded-lg bg-gray-50 p-4">
+                <h3 className="mb-2 font-semibold text-gray-900">Order Items</h3>
+                {selectedOrder.items.map((item, index) => (
+                  <div key={index} className="mb-3 flex items-center gap-3 last:mb-0">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-gray-200">
+                      <FiShoppingBag className="h-6 w-6 text-gray-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">{item.productTitle}</p>
+                      <p className="text-xs text-gray-600">Quantity: {item.quantity}</p>
+                      {item.startDate && item.endDate && (
+                        <p className="text-xs text-gray-600">Rental: {formatDate(item.startDate)} to {formatDate(item.endDate)}</p>
+                      )}
+                      {item.purchaseOption === 'installment' && (
+                        <p className="text-xs text-purple-700">
+                          Installment: {item.installmentMonths} months at {formatCurrency(item.monthlyInstallment || 0)}
+                        </p>
+                      )}
+                    </div>
+                    <p className="text-sm font-bold text-gray-900">{formatCurrency(item.totalPrice)}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-lg bg-gray-50 p-4">
+                <h3 className="mb-2 font-semibold text-gray-900">Payment Information</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Payment Method:</span>
+                    <span className="font-medium">{selectedOrder.paymentMethod}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Payment Status:</span>
+                    <span className="font-medium">{selectedOrder.paymentStatus}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Reference:</span>
+                    <span className="font-medium">{selectedOrder.paymentReference || 'Not available yet'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Total Amount:</span>
+                    <span className="font-bold text-primary-600">{formatCurrency(selectedOrder.totalAmount)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {selectedOrder.paymentProof && (
+                <div className="rounded-lg border border-gray-200 p-4">
+                  <h3 className="mb-2 font-semibold text-gray-900">Payment Screenshot</h3>
+                  <img
+                    src={selectedOrder.paymentProof}
+                    alt="Payment proof"
+                    className="w-full rounded-lg border border-gray-200 bg-gray-50 object-contain"
+                  />
+                </div>
+              )}
+
+              {selectedOrder.rentalDocument && (
+                <div className="rounded-lg border border-gray-200 p-4">
+                  <h3 className="mb-2 font-semibold text-gray-900">Rental Document</h3>
+                  <a
+                    href={selectedOrder.rentalDocument}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sm font-medium text-primary-600 underline"
+                  >
+                    Open uploaded ID/document
+                  </a>
+                </div>
+              )}
+
+              {selectedOrder.status === 'pending' && (
+                <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+                  <p className="mb-3 text-sm font-medium text-green-800">
+                    Confirm the order when you are ready to proceed with fulfillment.
+                  </p>
+                  <button
+                    onClick={() => handleConfirmOrder(selectedOrder.id)}
+                    disabled={confirmingOrder}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 py-3 font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {confirmingOrder ? 'Confirming...' : 'Confirm Order'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

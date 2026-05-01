@@ -2,7 +2,7 @@ import { ProductCategory, ProductType, UserRole } from '@/types';
 
 export const APP_NAME = 'General Accessories';
 
-export const PRODUCT_TYPES: ProductType[] = ['rent', 'sale', 'installment', 'sale_installment'];
+export const PRODUCT_TYPES: ProductType[] = ['rent', 'sale'];
 
 export const PRODUCT_CATEGORIES: ProductCategory[] = [
   'electronics',
@@ -43,8 +43,8 @@ export const PRODUCT_CATEGORY_LABELS: Record<ProductCategory, string> = {
 export const PRODUCT_TYPE_LABELS: Record<ProductType, string> = {
   rent: 'Rent',
   sale: 'Sale',
-  installment: 'Installment',
-  sale_installment: 'Sale/Installment',
+  installment: 'Sale',
+  sale_installment: 'Sale',
 };
 
 export const DASHBOARD_ROUTE_BY_ROLE: Partial<Record<UserRole, string>> = {

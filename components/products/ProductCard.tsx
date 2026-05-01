@@ -25,8 +25,8 @@ export default function ProductCard({ product }: ProductCardProps) {
     const labels = {
       rent: 'RENT',
       sale: 'SALE',
-      installment: 'INSTALLMENT',
-      sale_installment: 'SALE/INSTALLMENT',
+      installment: 'SALE',
+      sale_installment: 'SALE',
     }
     return labels[product.type]
   }
@@ -45,6 +45,11 @@ export default function ProductCard({ product }: ProductCardProps) {
           <div className={`absolute left-2 top-2 rounded-full px-2 py-0.5 text-xs font-semibold ${getTypeBadge()}`}>
             {getTypeLabel()}
           </div>
+          {product.availableOnInstallment && (
+            <div className="absolute right-2 top-2 rounded-full bg-purple-600 px-2 py-0.5 text-xs font-semibold text-white">
+              Installment
+            </div>
+          )}
         </div>
         <div className="p-3 sm:p-5">
           <h3 className="mb-1 sm:mb-2 text-sm sm:text-xl font-semibold text-gray-800 transition group-hover:text-primary-600 line-clamp-1">
@@ -57,11 +62,10 @@ export default function ProductCard({ product }: ProductCardProps) {
           </div>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-base sm:text-2xl font-bold text-primary-600">{formatCurrency(product.price)}</p>
-              {product.type === 'installment' && product.monthlyInstallment && (
-                <p className="text-xs text-gray-500 hidden sm:block">{formatCurrency(product.monthlyInstallment)}/month</p>
-              )}
-              {product.type === 'sale_installment' && product.monthlyInstallment && (
+              <p className="text-base sm:text-2xl font-bold text-primary-600">
+                {formatCurrency(product.price)}
+              </p>
+              {product.availableOnInstallment && product.monthlyInstallment && (
                 <div className="mt-1 hidden sm:block">
                   <p className="text-xs font-medium text-purple-600">
                     Or {formatCurrency(product.monthlyInstallment)}/month

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { Product, Service, User } from '@/types';
 import { PRODUCT_CATEGORIES, PRODUCT_TYPES, MAX_IMAGE_UPLOADS } from '@/lib/constants';
+import { isInstallmentProduct } from '@/lib/checkout';
 import { UserModel } from '@/models/User';
 import { hashPassword } from '@/lib/password';
 
@@ -35,12 +36,17 @@ export function serializeUser(user: any): User {
 }
 
 export function serializeProduct(product: any): Product {
+  const availableOnInstallment = Boolean(
+    product.availableOnInstallment || product.type === 'installment' || product.type === 'sale_installment'
+  );
+
   return {
     id: product._id.toString(),
     title: product.title,
     description: product.description,
     price: product.price,
     type: product.type,
+    availableOnInstallment,
     category: product.category,
     images: Array.isArray(product.images) ? product.images : [],
     vendorId: product.vendorId,
@@ -64,6 +70,7 @@ export function serializeService(service: any): Service {
     images: Array.isArray(service.images) ? service.images : [],
     providerId: service.providerId,
     providerName: service.providerName,
+    providerEmail: service.providerEmail || '',
     hourlyRate: service.hourlyRate,
     location: service.location,
     available: Boolean(service.available),
@@ -87,12 +94,20 @@ export function validateProductPayload(payload: any) {
     return `Only ${MAX_IMAGE_UPLOADS} images are allowed per product.`;
   }
 
-  if (payload.type === 'installment' || payload.type === 'sale_installment') {
+  if (payload.type === 'rent' && payload.availableOnInstallment) {
+    return 'Rental products cannot be marked as installment products.';
+  }
+
+  if (isInstallmentProduct(payload)) {
     if (Number(payload.installmentMonths) <= 0) return 'Installment months are required.';
     if (Number(payload.monthlyInstallment) <= 0) return 'Monthly installment is required.';
   }
 
-  return { ...payload, images };
+  return {
+    ...payload,
+    availableOnInstallment: Boolean(payload.availableOnInstallment),
+    images,
+  };
 }
 
 export function validateServicePayload(payload: any) {

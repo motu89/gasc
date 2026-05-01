@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { CartItem, User } from '@/types';
+import { buildCartItemId } from '@/lib/checkout';
 
 interface AppState {
   hydrated: boolean;
@@ -8,8 +9,8 @@ interface AppState {
   initializeAppState: () => void;
   setUser: (user: User | null) => void;
   addToCart: (item: CartItem) => void;
-  removeFromCart: (productId: string) => void;
-  updateCartItem: (productId: string, updates: Partial<CartItem>) => void;
+  removeFromCart: (cartItemId: string) => void;
+  updateCartItem: (cartItemId: string, updates: Partial<CartItem>) => void;
   clearCart: () => void;
 }
 
@@ -63,14 +64,27 @@ export const useStore = create<AppState>((set) => ({
   },
   addToCart: (item) =>
     set((state) => {
-      const existingItem = state.cart.find((cartItem) => cartItem.productId === item.productId);
+      const normalizedItem = {
+        ...item,
+        cartItemId:
+          item.cartItemId ||
+          buildCartItemId({
+            productId: item.productId,
+            purchaseOption: item.purchaseOption,
+            startDate: item.startDate,
+            endDate: item.endDate,
+          }),
+      };
+      const existingItem = state.cart.find(
+        (cartItem) => cartItem.cartItemId === normalizedItem.cartItemId
+      );
       const newCart = existingItem
         ? state.cart.map((cartItem) =>
-            cartItem.productId === item.productId
-              ? { ...cartItem, quantity: cartItem.quantity + item.quantity }
+            cartItem.cartItemId === normalizedItem.cartItemId
+              ? { ...cartItem, quantity: cartItem.quantity + normalizedItem.quantity }
               : cartItem
           )
-        : [...state.cart, item];
+        : [...state.cart, normalizedItem];
 
       if (typeof window !== 'undefined') {
         localStorage.setItem('app_cart', JSON.stringify(newCart));
@@ -78,9 +92,9 @@ export const useStore = create<AppState>((set) => ({
 
       return { cart: newCart };
     }),
-  removeFromCart: (productId) =>
+  removeFromCart: (cartItemId) =>
     set((state) => {
-      const newCart = state.cart.filter((item) => item.productId !== productId);
+      const newCart = state.cart.filter((item) => item.cartItemId !== cartItemId);
 
       if (typeof window !== 'undefined') {
         localStorage.setItem('app_cart', JSON.stringify(newCart));
@@ -88,10 +102,10 @@ export const useStore = create<AppState>((set) => ({
 
       return { cart: newCart };
     }),
-  updateCartItem: (productId, updates) =>
+  updateCartItem: (cartItemId, updates) =>
     set((state) => {
       const newCart = state.cart.map((item) =>
-        item.productId === productId ? { ...item, ...updates } : item
+        item.cartItemId === cartItemId ? { ...item, ...updates } : item
       );
 
       if (typeof window !== 'undefined') {

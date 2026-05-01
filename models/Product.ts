@@ -5,6 +5,7 @@ export interface ProductDocument {
   description: string;
   price: number;
   type: 'rent' | 'sale' | 'installment' | 'sale_installment';
+  availableOnInstallment: boolean;
   category: 'electronics' | 'home_appliances' | 'machinery' | 'furniture' | 'vehicles' | 'other';
   images: string[];
   vendorId: string;
@@ -25,6 +26,7 @@ const ProductSchema = new Schema<ProductDocument>(
     description: { type: String, required: true, trim: true },
     price: { type: Number, required: true, min: 0 },
     type: { type: String, enum: ['rent', 'sale', 'installment', 'sale_installment'], required: true },
+    availableOnInstallment: { type: Boolean, default: false },
     category: {
       type: String,
       enum: ['electronics', 'home_appliances', 'machinery', 'furniture', 'vehicles', 'other'],

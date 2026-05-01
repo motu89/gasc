@@ -1,11 +1,19 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { FiMapPin, FiShoppingCart, FiTag } from 'react-icons/fi'
+import { FiCalendar, FiMapPin, FiShoppingCart, FiTag } from 'react-icons/fi'
 import toast from 'react-hot-toast'
 import MarketplaceImage from '@/components/shared/MarketplaceImage'
 import { apiRequest } from '@/lib/api-client'
+import {
+  buildCartItemId,
+  calculateRentalDays,
+  getCartItemAmountDueNow,
+  getCartItemFullValue,
+  isInstallmentProduct,
+  isRentProduct,
+} from '@/lib/checkout'
 import { formatCurrency, getProductCategoryLabel } from '@/lib/format'
 import { useStore } from '@/lib/store'
 import { Product } from '@/types'
@@ -16,9 +24,10 @@ export default function ProductDetailPage() {
   const params = useParams<{ id: string }>()
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
-  const [rentalDays, setRentalDays] = useState(1)
   const [quantity, setQuantity] = useState(1)
-  const [paymentMethod, setPaymentMethod] = useState<'sale' | 'installment'>('sale')
+  const [purchaseOption, setPurchaseOption] = useState<'full' | 'installment'>('full')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
 
   useEffect(() => {
     if (!params?.id) return
@@ -45,6 +54,8 @@ export default function ProductDetailPage() {
     }
   }, [hydrated, product, router, user])
 
+  const rentalDays = useMemo(() => calculateRentalDays(startDate, endDate), [startDate, endDate])
+
   if (!hydrated || loading) {
     return <div className="min-h-screen bg-gray-50 p-10 text-center text-gray-600">Loading product...</div>
   }
@@ -57,6 +68,28 @@ export default function ProductDetailPage() {
     return null
   }
 
+  const rentalProduct = isRentProduct(product)
+  const installmentEnabled = isInstallmentProduct(product) && !rentalProduct
+
+  const cartPreview = {
+    cartItemId: buildCartItemId({
+      productId: product.id,
+      purchaseOption,
+      startDate,
+      endDate,
+    }),
+    productId: product.id,
+    product,
+    quantity,
+    startDate: rentalProduct ? startDate : undefined,
+    endDate: rentalProduct ? endDate : undefined,
+    rentalDays: rentalProduct ? rentalDays : undefined,
+    purchaseOption: installmentEnabled ? purchaseOption : 'full',
+  }
+
+  const amountDueNow = getCartItemAmountDueNow(cartPreview)
+  const fullValue = getCartItemFullValue(cartPreview)
+
   const handleAddToCart = () => {
     if (!user) {
       toast.error('Please login to add items to cart.')
@@ -64,39 +97,28 @@ export default function ProductDetailPage() {
       return
     }
 
-    addToCart({
-      productId: product.id,
-      product,
-      quantity,
-      rentalDays: product.type === 'rent' ? rentalDays : undefined,
-      paymentMethod: product.type === 'sale_installment' ? paymentMethod : undefined,
-    })
+    if (rentalProduct) {
+      if (!startDate || !endDate || rentalDays <= 0) {
+        toast.error('Select valid rental dates first.')
+        return
+      }
+    }
 
-    const methodText = paymentMethod === 'installment' ? ' installment plan' : ''
-    toast.success(`Product${methodText} added to cart.`)
+    addToCart(cartPreview)
+    toast.success(rentalProduct ? 'Rental product added to cart.' : 'Product added to cart.')
   }
-
-  const totalPrice = (() => {
-    if (product.type === 'rent') {
-      return product.price * rentalDays * quantity
-    }
-    if (product.type === 'sale_installment' && paymentMethod === 'installment') {
-      return product.monthlyInstallment ? product.monthlyInstallment * (product.installmentMonths || 1) * quantity : product.price * quantity
-    }
-    return product.price * quantity
-  })()
 
   return (
     <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
       <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
         <div className="overflow-hidden rounded-lg bg-white shadow-md">
-          <div className="grid grid-cols-1 gap-4 sm:gap-6 p-4 sm:p-6 md:p-8 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 p-4 sm:gap-6 sm:p-6 md:p-8 lg:grid-cols-2">
             <div className="space-y-3 sm:space-y-4">
               <MarketplaceImage
                 src={product.images[0]}
                 alt={product.title}
                 fallbackLabel={product.title}
-                className="h-64 sm:h-80 md:h-96 w-full rounded-lg"
+                className="h-64 w-full rounded-lg sm:h-80 md:h-96"
               />
 
               {product.images.length > 1 && (
@@ -107,7 +129,7 @@ export default function ProductDetailPage() {
                       src={image}
                       alt={`${product.title} ${index + 2}`}
                       fallbackLabel={product.title}
-                      className="h-24 sm:h-32 w-full rounded-lg"
+                      className="h-24 w-full rounded-lg sm:h-32"
                     />
                   ))}
                 </div>
@@ -116,181 +138,165 @@ export default function ProductDetailPage() {
 
             <div>
               {!product.approved && (
-                <div className="mb-4 rounded-xl border border-yellow-200 bg-yellow-50 p-3 sm:p-4 text-xs sm:text-sm font-medium text-yellow-900">
+                <div className="mb-4 rounded-xl border border-yellow-200 bg-yellow-50 p-3 text-xs font-medium text-yellow-900 sm:p-4 sm:text-sm">
                   This product is waiting for admin approval. It is not visible to regular users yet.
                 </div>
               )}
-              <div className="mb-4">
-                <span
-                  className={`rounded-full px-2 sm:px-3 py-1 text-xs sm:text-sm font-semibold ${
-                    product.type === 'rent'
-                      ? 'bg-blue-100 text-blue-800'
-                      : product.type === 'sale'
-                        ? 'bg-green-100 text-green-800'
-                        : product.type === 'sale_installment'
-                          ? 'bg-gradient-to-r from-green-100 to-purple-100 text-green-800'
-                          : 'bg-purple-100 text-purple-800'
-                  }`}
-                >
-                  {product.type === 'sale_installment' ? 'SALE/INSTALLMENT' : product.type.toUpperCase()}
-                </span>
-              </div>
-              <h1 className="mb-3 sm:mb-4 text-2xl sm:text-3xl md:text-4xl font-bold text-black">{product.title}</h1>
-              <p className="mb-4 sm:mb-6 text-sm sm:text-base text-gray-600">{product.description}</p>
 
-              <div className="mb-4 sm:mb-6 space-y-3 sm:space-y-4">
-                <div className="flex items-center text-sm sm:text-base text-gray-600">
-                  <FiMapPin className="mr-2 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+              <div className="mb-4 flex flex-wrap gap-2">
+                <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                  {rentalProduct ? 'RENT' : 'SALE'}
+                </span>
+                {installmentEnabled && (
+                  <span className="rounded-full bg-purple-50 px-3 py-1 text-xs font-semibold text-purple-700">
+                    Available on Installment
+                  </span>
+                )}
+              </div>
+
+              <h1 className="mb-3 text-2xl font-bold text-black sm:mb-4 sm:text-3xl md:text-4xl">{product.title}</h1>
+              <p className="mb-4 text-sm text-gray-600 sm:mb-6 sm:text-base">{product.description}</p>
+
+              <div className="mb-4 space-y-3 sm:mb-6 sm:space-y-4">
+                <div className="flex items-center text-sm text-gray-600 sm:text-base">
+                  <FiMapPin className="mr-2 h-4 w-4 flex-shrink-0 sm:h-5 sm:w-5" />
                   <span>{product.location}</span>
                 </div>
-                <div className="flex items-center text-sm sm:text-base text-gray-600">
-                  <FiTag className="mr-2 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                <div className="flex items-center text-sm text-gray-600 sm:text-base">
+                  <FiTag className="mr-2 h-4 w-4 flex-shrink-0 sm:h-5 sm:w-5" />
                   <span>{getProductCategoryLabel(product.category)}</span>
                 </div>
-                <div className="text-xs sm:text-sm text-gray-600">
+                <div className="text-xs text-gray-600 sm:text-sm">
                   <span>Vendor: </span>
                   <span className="font-semibold">{product.vendorName}</span>
                 </div>
               </div>
 
-              <div className="mb-4 sm:mb-6 border-t pt-4 sm:pt-6">
-                <div className="mb-3 sm:mb-4">
-                  <p className="mb-2 text-2xl sm:text-3xl font-bold text-primary-600">
-                    {formatCurrency(product.price)}
-                    {product.type === 'rent' && <span className="text-sm sm:text-lg text-gray-600"> / day</span>}
-                  </p>
-                  {product.type === 'installment' && product.monthlyInstallment && (
-                    <p className="text-xs sm:text-sm text-gray-600">
-                      {formatCurrency(product.monthlyInstallment)} / month for {product.installmentMonths} months
-                    </p>
-                  )}
-                  {product.type === 'sale_installment' && product.monthlyInstallment && (
-                    <div className="mt-3 sm:mt-4">
-                      <p className="text-xs sm:text-sm font-semibold text-gray-700 mb-3">Choose Payment Option:</p>
-                      <div className="grid gap-3">
-                        {/* One-Time Purchase Option */}
-                        <button
-                          type="button"
-                          onClick={() => setPaymentMethod('sale')}
-                          className={`rounded-lg p-3 sm:p-4 border-2 transition-all duration-200 text-left ${
-                            paymentMethod === 'sale'
-                              ? 'border-green-500 bg-green-50 shadow-md'
-                              : 'border-green-200 bg-green-50/50 hover:border-green-400'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-2">
-                              <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${
-                                paymentMethod === 'sale' ? 'border-green-600 bg-green-600' : 'border-green-400'
-                              }`}>
-                                {paymentMethod === 'sale' && (
-                                  <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                  </svg>
-                                )}
-                              </div>
-                              <div>
-                                <p className="text-sm font-semibold text-green-800">💰 One-Time Purchase</p>
-                                <p className="text-lg sm:text-xl font-bold text-green-700 mt-1">{formatCurrency(product.price)}</p>
-                              </div>
-                            </div>
-                            {paymentMethod === 'sale' && (
-                              <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">Selected</span>
-                            )}
-                          </div>
-                        </button>
+              <div className="mb-4 border-t pt-4 sm:mb-6 sm:pt-6">
+                <p className="mb-2 text-2xl font-bold text-primary-600 sm:text-3xl">
+                  {formatCurrency(product.price)}
+                  {rentalProduct && <span className="text-sm text-gray-600 sm:text-lg"> / day</span>}
+                </p>
 
-                        {/* Installment Plan Option */}
-                        <button
-                          type="button"
-                          onClick={() => setPaymentMethod('installment')}
-                          className={`rounded-lg p-3 sm:p-4 border-2 transition-all duration-200 text-left ${
-                            paymentMethod === 'installment'
-                              ? 'border-purple-500 bg-purple-50 shadow-md'
-                              : 'border-purple-200 bg-purple-50/50 hover:border-purple-400'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-2">
-                              <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${
-                                paymentMethod === 'installment' ? 'border-purple-600 bg-purple-600' : 'border-purple-400'
-                              }`}>
-                                {paymentMethod === 'installment' && (
-                                  <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                  </svg>
-                                )}
-                              </div>
-                              <div>
-                                <p className="text-sm font-semibold text-purple-800">📦 Installment Plan</p>
-                                <p className="text-lg sm:text-xl font-bold text-purple-700 mt-1">
-                                  {formatCurrency(product.monthlyInstallment)} / month
-                                </p>
-                                <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                                  for {product.installmentMonths} months
-                                </p>
-                                <p className="text-xs font-medium text-purple-600 mt-1">
-                                  Total: {formatCurrency(product.monthlyInstallment * (product.installmentMonths || 1))}
-                                </p>
-                              </div>
-                            </div>
-                            {paymentMethod === 'installment' && (
-                              <span className="text-xs font-medium text-purple-600 bg-purple-100 px-2 py-1 rounded-full">Selected</span>
-                            )}
-                          </div>
-                        </button>
-                      </div>
+                {installmentEnabled && product.monthlyInstallment && product.installmentMonths && (
+                  <div className="mt-4 rounded-lg border border-purple-200 bg-purple-50 p-4">
+                    <p className="mb-3 text-sm font-semibold text-purple-800">Choose how you want to pay</p>
+                    <div className="grid gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setPurchaseOption('full')}
+                        className={`rounded-lg border p-3 text-left ${
+                          purchaseOption === 'full'
+                            ? 'border-green-500 bg-green-50'
+                            : 'border-gray-200 bg-white'
+                        }`}
+                      >
+                        <p className="text-sm font-semibold text-gray-900">Pay in full</p>
+                        <p className="text-lg font-bold text-green-700">{formatCurrency(product.price)}</p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPurchaseOption('installment')}
+                        className={`rounded-lg border p-3 text-left ${
+                          purchaseOption === 'installment'
+                            ? 'border-purple-500 bg-purple-100'
+                            : 'border-gray-200 bg-white'
+                        }`}
+                      >
+                        <p className="text-sm font-semibold text-gray-900">Pay in installments</p>
+                        <p className="text-lg font-bold text-purple-700">
+                          {formatCurrency(product.monthlyInstallment)} / month
+                        </p>
+                        <p className="text-xs text-gray-600">
+                          {product.installmentMonths} months, total plan {formatCurrency(product.monthlyInstallment * product.installmentMonths)}
+                        </p>
+                      </button>
                     </div>
-                  )}
-                </div>
-
-                {product.type === 'rent' && (
-                  <div className="mb-3 sm:mb-4">
-                    <label className="mb-2 block text-xs sm:text-sm font-medium text-gray-700">Rental Days</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={rentalDays}
-                      onChange={(event) => setRentalDays(parseInt(event.target.value, 10) || 1)}
-                      className="w-24 sm:w-32 rounded-lg border border-gray-300 px-3 py-2 text-sm sm:text-base text-gray-900 focus:ring-2 focus:ring-primary-500"
-                    />
                   </div>
                 )}
-
-                <div className="mb-3 sm:mb-4">
-                  <label className="mb-2 block text-xs sm:text-sm font-medium text-gray-700">Quantity</label>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setQuantity((current) => Math.max(1, current - 1))}
-                      className="flex h-8 sm:h-10 w-8 sm:w-10 items-center justify-center rounded border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm sm:text-base"
-                    >
-                      -
-                    </button>
-                    <span className="w-10 sm:w-12 text-center text-sm sm:text-base">{quantity}</span>
-                    <button
-                      onClick={() => setQuantity((current) => current + 1)}
-                      className="flex h-8 sm:h-10 w-8 sm:w-10 items-center justify-center rounded border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm sm:text-base"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-
-                <div className="mb-4 sm:mb-6 rounded-lg bg-gray-50 p-3 sm:p-4">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-sm sm:text-base text-gray-600">Total:</span>
-                    <span className="text-xl sm:text-2xl font-bold text-primary-600">{formatCurrency(totalPrice)}</span>
-                  </div>
-                </div>
-
-                <button
-                  onClick={handleAddToCart}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary-600 py-2 sm:py-3 font-semibold text-white text-sm sm:text-base transition hover:bg-primary-700"
-                >
-                  <FiShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
-                  Add to Cart
-                </button>
               </div>
+
+              {rentalProduct && (
+                <div className="mb-4 grid gap-4 sm:mb-6 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      <FiCalendar className="mr-1 inline h-4 w-4" />
+                      Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      min={new Date().toISOString().split('T')[0]}
+                      onChange={(event) => setStartDate(event.target.value)}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      <FiCalendar className="mr-1 inline h-4 w-4" />
+                      End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      min={startDate || new Date().toISOString().split('T')[0]}
+                      onChange={(event) => setEndDate(event.target.value)}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="mb-3 sm:mb-4">
+                <label className="mb-2 block text-xs font-medium text-gray-700 sm:text-sm">Quantity</label>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setQuantity((current) => Math.max(1, current - 1))}
+                    className="flex h-8 w-8 items-center justify-center rounded border border-gray-300 text-gray-600 hover:bg-gray-50 sm:h-10 sm:w-10"
+                  >
+                    -
+                  </button>
+                  <span className="w-10 text-center sm:w-12">{quantity}</span>
+                  <button
+                    onClick={() => setQuantity((current) => current + 1)}
+                    className="flex h-8 w-8 items-center justify-center rounded border border-gray-300 text-gray-600 hover:bg-gray-50 sm:h-10 sm:w-10"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              <div className="mb-4 rounded-lg bg-gray-50 p-4 sm:mb-6">
+                {rentalProduct && (
+                  <p className="mb-2 text-sm text-gray-600">
+                    {rentalDays > 0 ? `${rentalDays} rental day(s)` : 'Select rental dates to calculate total'}
+                  </p>
+                )}
+                {installmentEnabled && purchaseOption === 'installment' ? (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-gray-600">Due now:</span>
+                      <span className="text-2xl font-bold text-primary-600">{formatCurrency(amountDueNow)}</span>
+                    </div>
+                    <p className="mt-2 text-sm text-purple-700">
+                      Total installment plan: {formatCurrency(fullValue)}
+                    </p>
+                  </>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-gray-600">Total:</span>
+                    <span className="text-2xl font-bold text-primary-600">{formatCurrency(amountDueNow)}</span>
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={handleAddToCart}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary-600 py-3 font-semibold text-white transition hover:bg-primary-700"
+              >
+                <FiShoppingCart className="h-5 w-5" />
+                Add to Cart
+              </button>
             </div>
           </div>
         </div>

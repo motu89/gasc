@@ -4,6 +4,7 @@ import { errorResponse } from '@/lib/server-utils';
 import { BookingModel } from '@/models/Booking';
 import { ServiceModel } from '@/models/Service';
 import { validateBookingTime, calculateDeposit } from '@/lib/time-utils';
+import { sendBookingEmails } from '@/lib/notifications';
 
 export async function GET(request: NextRequest) {
   try {
@@ -32,8 +33,11 @@ export async function GET(request: NextRequest) {
         serviceTitle: booking.serviceTitle,
         providerId: booking.providerId,
         providerName: booking.providerName,
+        providerEmail: booking.providerEmail,
         userId: booking.userId,
         userName: booking.userName,
+        userEmail: booking.userEmail,
+        userAddress: booking.userAddress,
         date: booking.date,
         time: booking.time,
         duration: booking.duration,
@@ -42,7 +46,10 @@ export async function GET(request: NextRequest) {
         totalAmount: booking.totalAmount,
         status: booking.status,
         paymentMethod: booking.paymentMethod,
+        paymentStatus: booking.paymentStatus,
+        paymentReference: booking.paymentReference,
         paymentProof: booking.paymentProof,
+        stripeCheckoutSessionId: booking.stripeCheckoutSessionId,
         createdAt:
           booking.createdAt instanceof Date ? booking.createdAt.toISOString() : booking.createdAt,
       })),
@@ -58,17 +65,35 @@ export async function POST(request: NextRequest) {
     await connectToDatabase();
 
     const payload = await request.json();
-    const { serviceId, userId, userName, date, time, duration, paymentMethod, paymentProof } = payload;
+    const {
+      serviceId,
+      userId,
+      userName,
+      userEmail,
+      userAddress,
+      date,
+      time,
+      duration,
+      paymentMethod,
+      paymentProof,
+    } = payload;
 
     if (!serviceId || !userId || !userName || !date || !time || Number(duration) <= 0) {
       return errorResponse('Please provide valid booking details.');
     }
 
-    if (!paymentMethod || !paymentProof) {
-      return errorResponse('Payment method and payment proof are required.');
+    if (!userAddress?.trim()) {
+      return errorResponse('Address is required.');
     }
 
-    // Validate booking time (must be at least 2 hours ahead of Pakistan time)
+    if (!paymentMethod || !['easypaisa', 'jazzcash', 'cod'].includes(paymentMethod)) {
+      return errorResponse('Select a valid payment method.');
+    }
+
+    if ((paymentMethod === 'easypaisa' || paymentMethod === 'jazzcash') && !paymentProof) {
+      return errorResponse('Payment screenshot is required for manual payments.');
+    }
+
     const timeValidation = validateBookingTime(date, time);
     if (!timeValidation.isValid) {
       return errorResponse(timeValidation.message, 400);
@@ -80,27 +105,30 @@ export async function POST(request: NextRequest) {
       return errorResponse('This service is not available for booking.', 404);
     }
 
-    // Calculate prices
     const fullPrice = Number(duration) * service.hourlyRate;
     const depositAmount = calculateDeposit(fullPrice);
-    const totalAmount = depositAmount; // User pays 10% now
+    const totalAmount = depositAmount;
 
     const booking = await BookingModel.create({
       serviceId: service._id.toString(),
       serviceTitle: service.title,
       providerId: service.providerId,
       providerName: service.providerName,
+      providerEmail: service.providerEmail || '',
       userId,
       userName,
+      userEmail: userEmail || '',
+      userAddress: userAddress.trim(),
       date,
       time,
       duration: Number(duration),
       fullPrice,
       depositAmount,
       totalAmount,
-      status: 'pending',
+      status: paymentMethod === 'cod' ? 'confirmed' : 'pending',
       paymentMethod,
-      paymentProof,
+      paymentStatus: 'pending',
+      paymentProof: paymentProof || undefined,
     });
 
     service.totalBookings = (service.totalBookings || 0) + 1;
@@ -109,6 +137,19 @@ export async function POST(request: NextRequest) {
     }
     await service.save();
 
+    await sendBookingEmails({
+      serviceTitle: booking.serviceTitle,
+      userEmail: booking.userEmail,
+      providerEmail: booking.providerEmail,
+      userAddress: booking.userAddress,
+      paymentMethod: booking.paymentMethod,
+      paymentStatus: booking.paymentStatus,
+      totalAmount: booking.totalAmount,
+      date: booking.date,
+      time: booking.time,
+      duration: booking.duration,
+    });
+
     return NextResponse.json({
       booking: {
         id: booking._id.toString(),
@@ -116,6 +157,7 @@ export async function POST(request: NextRequest) {
         depositAmount: booking.depositAmount,
         totalAmount: booking.totalAmount,
         status: booking.status,
+        paymentStatus: booking.paymentStatus,
       },
     });
   } catch (error) {

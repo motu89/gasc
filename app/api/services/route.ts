@@ -88,6 +88,7 @@ export async function POST(request: NextRequest) {
       images: validated.images,
       providerId: validated.providerId,
       providerName: validated.providerName,
+      providerEmail: validated.providerEmail || '',
       hourlyRate: Number(validated.hourlyRate),
       location: validated.location.trim(),
       available: validated.available !== false,

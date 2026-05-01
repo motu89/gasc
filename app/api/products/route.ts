@@ -90,6 +90,7 @@ export async function POST(request: NextRequest) {
       description: validated.description.trim(),
       price: Number(validated.price),
       type: validated.type,
+      availableOnInstallment: Boolean(validated.availableOnInstallment),
       category: validated.category,
       images: validated.images,
       vendorId: validated.vendorId,
@@ -97,14 +98,8 @@ export async function POST(request: NextRequest) {
       vendorEmail: validated.vendorEmail || '',
       location: validated.location.trim(),
       available: validated.available !== false,
-      installmentMonths:
-        (validated.type === 'installment' || validated.type === 'sale_installment') 
-          ? Number(validated.installmentMonths) 
-          : undefined,
-      monthlyInstallment:
-        (validated.type === 'installment' || validated.type === 'sale_installment') 
-          ? Number(validated.monthlyInstallment) 
-          : undefined,
+      installmentMonths: validated.availableOnInstallment ? Number(validated.installmentMonths) : undefined,
+      monthlyInstallment: validated.availableOnInstallment ? Number(validated.monthlyInstallment) : undefined,
       approved: false,
     });
 

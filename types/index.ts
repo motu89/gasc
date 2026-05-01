@@ -1,4 +1,7 @@
 export type UserRole = 'user' | 'vendor' | 'service_provider' | 'admin';
+export type PaymentMethod = 'easypaisa' | 'jazzcash' | 'cod' | 'card';
+export type PaymentStatus = 'pending' | 'paid' | 'failed';
+export type PurchaseOption = 'full' | 'installment';
 
 export interface User {
   id: string;
@@ -21,6 +24,7 @@ export interface Product {
   description: string;
   price: number;
   type: ProductType;
+  availableOnInstallment: boolean;
   category: ProductCategory;
   images: string[];
   vendorId: string;
@@ -42,6 +46,7 @@ export interface Service {
   images: string[];
   providerId: string;
   providerName: string;
+  providerEmail?: string;
   hourlyRate: number;
   location: string;
   available: boolean;
@@ -57,8 +62,11 @@ export interface Booking {
   serviceTitle: string;
   providerId: string;
   providerName: string;
+  providerEmail?: string;
   userId: string;
   userName: string;
+  userEmail?: string;
+  userAddress: string;
   date: string;
   time: string;
   duration: number;
@@ -66,19 +74,23 @@ export interface Booking {
   depositAmount: number;
   totalAmount: number;
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
-  paymentMethod?: 'easypaisa' | 'jazzcash';
+  paymentMethod?: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  paymentReference?: string;
   paymentProof?: string;
+  stripeCheckoutSessionId?: string;
   createdAt: string;
 }
 
 export interface CartItem {
+  cartItemId: string;
   productId: string;
   product: Product;
   quantity: number;
   rentalDays?: number;
   startDate?: string;
   endDate?: string;
-  paymentMethod?: 'sale' | 'installment';
+  purchaseOption?: PurchaseOption;
 }
 
 export interface OrderItem {
@@ -89,9 +101,12 @@ export interface OrderItem {
   unitPrice: number;
   totalPrice: number;
   rentalDays?: number;
-  paymentMethod?: 'sale' | 'installment';
+  startDate?: string;
+  endDate?: string;
+  purchaseOption?: PurchaseOption;
   installmentMonths?: number;
   monthlyInstallment?: number;
+  fullPlanPrice?: number;
 }
 
 export interface Order {
@@ -100,23 +115,21 @@ export interface Order {
   userId: string;
   userName: string;
   userEmail: string;
+  shippingAddress: string;
   items: OrderItem[];
   subtotal: number;
   totalAmount: number;
-  paymentMethod: 'easypaisa' | 'jazzcash';
-  paymentProof: string;
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  paymentReference?: string;
+  paymentProof?: string;
+  rentalDocument?: string;
   vendorId: string;
   vendorName: string;
+  vendorEmail?: string;
   status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
+  stripeCheckoutSessionId?: string;
   createdAt: string;
-}
-
-export interface PaymentModalState {
-  isOpen: boolean;
-  step: 'select-method' | 'view-details' | 'upload-proof';
-  selectedMethod: 'easypaisa' | 'jazzcash' | null;
-  accountNumber: string;
-  screenshot: string | null;
 }
 
 export interface ApiErrorResponse {

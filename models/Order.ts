@@ -8,9 +8,12 @@ export interface OrderItemDocument {
   unitPrice: number;
   totalPrice: number;
   rentalDays?: number;
-  paymentMethod?: 'sale' | 'installment';
+  startDate?: string;
+  endDate?: string;
+  purchaseOption?: 'full' | 'installment';
   installmentMonths?: number;
   monthlyInstallment?: number;
+  fullPlanPrice?: number;
 }
 
 export interface OrderDocument {
@@ -18,14 +21,20 @@ export interface OrderDocument {
   userId: string;
   userName: string;
   userEmail: string;
+  shippingAddress: string;
   items: OrderItemDocument[];
   subtotal: number;
   totalAmount: number;
-  paymentMethod: 'easypaisa' | 'jazzcash';
-  paymentProof: string;
+  paymentMethod: 'easypaisa' | 'jazzcash' | 'cod' | 'card';
+  paymentStatus: 'pending' | 'paid' | 'failed';
+  paymentReference?: string;
+  paymentProof?: string;
+  rentalDocument?: string;
   vendorId: string;
   vendorName: string;
+  vendorEmail?: string;
   status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
+  stripeCheckoutSessionId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -38,9 +47,12 @@ const OrderItemSchema = new Schema<OrderItemDocument>({
   unitPrice: { type: Number, required: true, min: 0 },
   totalPrice: { type: Number, required: true, min: 0 },
   rentalDays: { type: Number, min: 1 },
-  paymentMethod: { type: String, enum: ['sale', 'installment'] },
+  startDate: { type: String },
+  endDate: { type: String },
+  purchaseOption: { type: String, enum: ['full', 'installment'] },
   installmentMonths: { type: Number, min: 1 },
   monthlyInstallment: { type: Number, min: 0 },
+  fullPlanPrice: { type: Number, min: 0 },
 });
 
 const OrderSchema = new Schema<OrderDocument>(
@@ -49,22 +61,32 @@ const OrderSchema = new Schema<OrderDocument>(
     userId: { type: String, required: true },
     userName: { type: String, required: true, trim: true },
     userEmail: { type: String, required: true, trim: true, lowercase: true },
+    shippingAddress: { type: String, required: true, trim: true },
     items: { type: [OrderItemSchema], required: true },
     subtotal: { type: Number, required: true, min: 0 },
     totalAmount: { type: Number, required: true, min: 0 },
     paymentMethod: {
       type: String,
-      enum: ['easypaisa', 'jazzcash'],
+      enum: ['easypaisa', 'jazzcash', 'cod', 'card'],
       required: true,
     },
-    paymentProof: { type: String, required: true },
+    paymentStatus: {
+      type: String,
+      enum: ['pending', 'paid', 'failed'],
+      default: 'pending',
+    },
+    paymentReference: { type: String, trim: true },
+    paymentProof: { type: String },
+    rentalDocument: { type: String },
     vendorId: { type: String, required: true },
     vendorName: { type: String, required: true, trim: true },
+    vendorEmail: { type: String, trim: true, lowercase: true },
     status: {
       type: String,
       enum: ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'],
       default: 'pending',
     },
+    stripeCheckoutSessionId: { type: String, trim: true },
   },
   {
     timestamps: true,

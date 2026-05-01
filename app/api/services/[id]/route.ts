@@ -62,6 +62,7 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
     service.location = validated.location.trim();
     service.available = validated.available !== false;
     service.providerName = validated.providerName || service.providerName;
+    service.providerEmail = validated.providerEmail || service.providerEmail;
     service.approved = false;
 
     await service.save();

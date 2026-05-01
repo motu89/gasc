@@ -58,20 +58,19 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
     product.description = validated.description.trim();
     product.price = Number(validated.price);
     product.type = validated.type;
+    product.availableOnInstallment = Boolean(validated.availableOnInstallment);
     product.category = validated.category;
     product.images = validated.images;
     product.location = validated.location.trim();
     product.available = validated.available !== false;
     product.vendorName = validated.vendorName || product.vendorName;
     product.vendorEmail = validated.vendorEmail || product.vendorEmail;
-    product.installmentMonths =
-      (validated.type === 'installment' || validated.type === 'sale_installment') 
-        ? Number(validated.installmentMonths) 
-        : undefined;
-    product.monthlyInstallment =
-      (validated.type === 'installment' || validated.type === 'sale_installment') 
-        ? Number(validated.monthlyInstallment) 
-        : undefined;
+    product.installmentMonths = validated.availableOnInstallment
+      ? Number(validated.installmentMonths)
+      : undefined;
+    product.monthlyInstallment = validated.availableOnInstallment
+      ? Number(validated.monthlyInstallment)
+      : undefined;
     product.approved = false;
 
     await product.save();
