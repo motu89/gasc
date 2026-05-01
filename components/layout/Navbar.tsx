@@ -41,6 +41,11 @@ export default function Navbar() {
             <Link href="/services" className="rounded-lg px-4 py-2 font-medium text-gray-700 transition-all hover:bg-primary-50 hover:text-primary-600">
               Services
             </Link>
+            {user && (
+              <Link href="/orders" className="rounded-lg px-4 py-2 font-medium text-gray-700 transition-all hover:bg-primary-50 hover:text-primary-600">
+                Orders
+              </Link>
+            )}
             {dashboardHref && (
               <Link href={dashboardHref} className="rounded-lg px-4 py-2 font-medium text-gray-700 transition-all hover:bg-primary-50 hover:text-primary-600">
                 Dashboard
@@ -107,6 +112,11 @@ export default function Navbar() {
             <Link href="/services" className="block rounded px-3 py-2 text-black hover:bg-gray-100" onClick={() => setIsOpen(false)}>
               Services
             </Link>
+            {user && (
+              <Link href="/orders" className="block rounded px-3 py-2 text-black hover:bg-gray-100" onClick={() => setIsOpen(false)}>
+                Orders
+              </Link>
+            )}
             {dashboardHref && (
               <Link href={dashboardHref} className="block rounded px-3 py-2 text-black hover:bg-gray-100" onClick={() => setIsOpen(false)}>
                 Dashboard

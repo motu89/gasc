@@ -95,6 +95,15 @@ export default function ServiceDetailPage() {
       ? paymentMethods.easyPaisaAccount
       : paymentMethods.jazzCashAccount
 
+  // Set default payment method to easypaisa if available, otherwise jazzcash
+  useEffect(() => {
+    if (hydrated && paymentMethods.easyPaisaAccount) {
+      setSelectedPaymentMethod('easypaisa')
+    } else if (hydrated && paymentMethods.jazzCashAccount) {
+      setSelectedPaymentMethod('jazzcash')
+    }
+  }, [hydrated, paymentMethods])
+
   if (!hydrated || loading) {
     return <div className="min-h-screen bg-gray-50 p-10 text-center text-gray-600">Loading service...</div>
   }
@@ -139,6 +148,7 @@ export default function ServiceDetailPage() {
   const manualCheckout = async () => {
     if (!validateBooking()) return
 
+    // For manual payments (easypaisa/jazzcash), show modal for payment proof
     if (requiresManualProof) {
       if (!selectedAccountNumber) {
         toast.error('Selected payment account is not available right now.')
@@ -148,7 +158,8 @@ export default function ServiceDetailPage() {
       return
     }
 
-    await submitBooking()
+    // For card payment, redirect to stripe
+    await handleCardCheckout()
   }
 
   const submitBooking = async (paymentProof?: string) => {
@@ -375,6 +386,7 @@ export default function ServiceDetailPage() {
                       <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 p-3">
                         <input
                           type="radio"
+                          name="paymentMethod"
                           checked={selectedPaymentMethod === 'easypaisa'}
                           onChange={() => setSelectedPaymentMethod('easypaisa')}
                         />
@@ -388,6 +400,7 @@ export default function ServiceDetailPage() {
                       <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 p-3">
                         <input
                           type="radio"
+                          name="paymentMethod"
                           checked={selectedPaymentMethod === 'jazzcash'}
                           onChange={() => setSelectedPaymentMethod('jazzcash')}
                         />
@@ -397,26 +410,15 @@ export default function ServiceDetailPage() {
                         </div>
                       </label>
                     )}
-                    <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 p-3">
-                      <input
-                        type="radio"
-                        checked={selectedPaymentMethod === 'cod'}
-                        onChange={() => setSelectedPaymentMethod('cod')}
-                      />
-                      <div>
-                        <p className="font-medium text-gray-900">Cash on Delivery</p>
-                        <p className="text-xs text-gray-600">Pay when the service is delivered.</p>
-                      </div>
-                    </label>
                   </div>
 
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
                     <button
                       onClick={manualCheckout}
-                      disabled={submitting}
+                      disabled={submitting || (!paymentMethods.easyPaisaAccount && !paymentMethods.jazzCashAccount)}
                       className="rounded-lg bg-primary-600 py-3 font-semibold text-white transition hover:bg-primary-700 disabled:opacity-60"
                     >
-                      {submitting ? 'Processing...' : 'Confirm Booking'}
+                      {submitting ? 'Processing...' : 'Pay with Easypaisa/JazzCash'}
                     </button>
                     <button
                       onClick={handleCardCheckout}
@@ -426,6 +428,28 @@ export default function ServiceDetailPage() {
                       <FiCreditCard className="h-4 w-4" />
                       Pay with Card
                     </button>
+                  </div>
+                  <p className="mt-3 text-xs text-gray-600">
+                    Easypaisa/JazzCash: Upload payment proof after transfer. Card: Secure payment via Stripe.
+                  </p>
+                </div>
+              </div>
+
+              {/* Cancellation Policy Note */}
+              <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
+                <div className="flex gap-2">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="mb-1 text-sm font-semibold text-blue-900">Cancellation Policy</h4>
+                    <p className="text-xs text-blue-800">
+                      You can cancel this booking within <span className="font-bold">30 minutes</span> of booking. 
+                      A refund will be processed by the admin with a <span className="font-bold">5% cancellation fee</span>. 
+                      The remaining amount (95%) will be refunded to your original payment method within 3-5 business days.
+                    </p>
                   </div>
                 </div>
               </div>

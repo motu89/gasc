@@ -1,29 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db';
-import { errorResponse } from '@/lib/server-utils';
 import { BookingModel } from '@/models/Booking';
 import { ServiceModel } from '@/models/Service';
-import { validateBookingTime, calculateDeposit } from '@/lib/time-utils';
+import { validateBookingTime } from '@/lib/time-utils';
 import { sendBookingEmails } from '@/lib/notifications';
 
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+    const providerId = searchParams.get('providerId');
+
+    if (!userId && !providerId) {
+      return NextResponse.json({ error: 'userId or providerId is required.' }, { status: 400 });
+    }
+
     await connectToDatabase();
 
-    const { searchParams } = new URL(request.url);
-    const providerId = searchParams.get('providerId');
-    const userId = searchParams.get('userId');
-
-    const query: Record<string, any> = {};
-
-    if (providerId) {
-      query.providerId = providerId;
-    }
-
-    if (userId) {
-      query.userId = userId;
-    }
-
+    const query = userId ? { userId } : { providerId };
     const bookings = await BookingModel.find(query).sort({ createdAt: -1 });
 
     return NextResponse.json({
@@ -50,13 +44,12 @@ export async function GET(request: NextRequest) {
         paymentReference: booking.paymentReference,
         paymentProof: booking.paymentProof,
         stripeCheckoutSessionId: booking.stripeCheckoutSessionId,
-        createdAt:
-          booking.createdAt instanceof Date ? booking.createdAt.toISOString() : booking.createdAt,
+        createdAt: booking.createdAt instanceof Date ? booking.createdAt.toISOString() : booking.createdAt,
       })),
     });
   } catch (error) {
-    console.error('Get bookings error:', error);
-    return errorResponse('Unable to load bookings.', 500);
+    console.error('Booking fetch error:', error);
+    return NextResponse.json({ error: 'Unable to fetch bookings.' }, { status: 500 });
   }
 }
 
@@ -79,34 +72,40 @@ export async function POST(request: NextRequest) {
     } = payload;
 
     if (!serviceId || !userId || !userName || !date || !time || Number(duration) <= 0) {
-      return errorResponse('Please provide valid booking details.');
+      return NextResponse.json({ error: 'Please provide valid booking details.' }, { status: 400 });
     }
 
     if (!userAddress?.trim()) {
-      return errorResponse('Address is required.');
+      return NextResponse.json({ error: 'Address is required.' }, { status: 400 });
     }
 
     if (!paymentMethod || !['easypaisa', 'jazzcash', 'cod'].includes(paymentMethod)) {
-      return errorResponse('Select a valid payment method.');
+      return NextResponse.json({ error: 'Select a valid payment method (Easypaisa, JazzCash, or manual payment).' }, { status: 400 });
     }
 
     if ((paymentMethod === 'easypaisa' || paymentMethod === 'jazzcash') && !paymentProof) {
-      return errorResponse('Payment screenshot is required for manual payments.');
+      return NextResponse.json(
+        { error: 'Payment screenshot is required for manual payments.' },
+        { status: 400 }
+      );
     }
 
     const timeValidation = validateBookingTime(date, time);
     if (!timeValidation.isValid) {
-      return errorResponse(timeValidation.message, 400);
+      return NextResponse.json({ error: timeValidation.message }, { status: 400 });
     }
 
     const service = await ServiceModel.findById(serviceId);
 
     if (!service || !service.available || !service.approved) {
-      return errorResponse('This service is not available for booking.', 404);
+      return NextResponse.json(
+        { error: 'This service is not available for booking.' },
+        { status: 404 }
+      );
     }
 
     const fullPrice = Number(duration) * service.hourlyRate;
-    const depositAmount = calculateDeposit(fullPrice);
+    const depositAmount = Math.ceil(fullPrice * 0.1);
     const totalAmount = depositAmount;
 
     const booking = await BookingModel.create({
@@ -125,10 +124,10 @@ export async function POST(request: NextRequest) {
       fullPrice,
       depositAmount,
       totalAmount,
-      status: paymentMethod === 'cod' ? 'confirmed' : 'pending',
+      status: 'pending',
       paymentMethod,
       paymentStatus: 'pending',
-      paymentProof: paymentProof || undefined,
+      paymentProof,
     });
 
     service.totalBookings = (service.totalBookings || 0) + 1;
@@ -151,6 +150,7 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({
+      message: 'Booking created successfully.',
       booking: {
         id: booking._id.toString(),
         fullPrice: booking.fullPrice,
@@ -162,48 +162,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Create booking error:', error);
-    return errorResponse('Unable to create booking right now.', 500);
-  }
-}
-
-export async function PATCH(request: NextRequest) {
-  try {
-    await connectToDatabase();
-
-    const body = await request.json();
-    const { bookingId, status, providerId } = body;
-
-    if (!bookingId || !status) {
-      return errorResponse('bookingId and status are required.');
-    }
-
-    const allowedStatuses = ['confirmed', 'completed', 'cancelled'];
-    if (!allowedStatuses.includes(status)) {
-      return errorResponse('Invalid status value.');
-    }
-
-    const booking = await BookingModel.findById(bookingId);
-
-    if (!booking) {
-      return errorResponse('Booking not found.', 404);
-    }
-
-    if (providerId && booking.providerId !== providerId) {
-      return errorResponse('Unauthorized to update this booking.', 403);
-    }
-
-    booking.status = status;
-    await booking.save();
-
-    return NextResponse.json({
-      message: `Booking status updated to ${status}`,
-      booking: {
-        id: booking._id.toString(),
-        status: booking.status,
-      },
-    });
-  } catch (error) {
-    console.error('Booking status update error:', error);
-    return errorResponse('Unable to update booking status.', 500);
+    return NextResponse.json({ error: 'Unable to create booking right now.' }, { status: 500 });
   }
 }

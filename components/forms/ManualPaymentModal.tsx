@@ -75,7 +75,7 @@ export default function ManualPaymentModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+      <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
         <div className="flex items-start justify-between border-b border-gray-200 px-6 py-4">
           <div>
             <h2 className="text-xl font-bold text-gray-900">{title}</h2>
@@ -90,58 +90,60 @@ export default function ManualPaymentModal({
           </button>
         </div>
 
-        <div className="space-y-5 px-6 py-6">
-          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-            <p className="text-sm text-gray-600">Payment Method</p>
-            <p className="text-lg font-semibold text-gray-900">{getMethodLabel(paymentMethod)}</p>
-            <p className="mt-3 text-sm text-gray-600">Send Payment To</p>
-            <p className="text-2xl font-bold text-primary-700">{accountNumber}</p>
-            <p className="mt-3 text-sm text-gray-600">Amount</p>
-            <p className="text-xl font-bold text-green-700">PKR {totalAmount.toLocaleString()}</p>
-          </div>
+        <div className="max-h-[calc(100vh-200px)] overflow-y-auto px-6 py-6">
+          <div className="space-y-5">
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+              <p className="text-sm text-gray-600">Payment Method</p>
+              <p className="text-lg font-semibold text-gray-900">{getMethodLabel(paymentMethod)}</p>
+              <p className="mt-3 text-sm text-gray-600">Send Payment To</p>
+              <p className="text-2xl font-bold text-primary-700">{accountNumber}</p>
+              <p className="mt-3 text-sm text-gray-600">Amount</p>
+              <p className="text-xl font-bold text-green-700">PKR {totalAmount.toLocaleString()}</p>
+            </div>
 
-          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
-            Transfer the amount first, then upload the screenshot from your Easypaisa or JazzCash app.
-          </div>
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+              Transfer the amount first, then upload the screenshot from your Easypaisa or JazzCash app.
+            </div>
 
-          <div className="rounded-xl border-2 border-dashed border-gray-300 p-5 text-center">
-            <label className="flex cursor-pointer flex-col items-center gap-3">
-              <FiUpload className="h-10 w-10 text-gray-400" />
-              <div>
-                <p className="font-medium text-gray-900">
-                  {paymentProof ? 'Replace payment screenshot' : 'Upload payment screenshot'}
-                </p>
-                <p className="text-xs text-gray-600">PNG or JPG, up to 5MB</p>
-              </div>
-              <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
-            </label>
+            <div className="rounded-xl border-2 border-dashed border-gray-300 p-5 text-center">
+              <label className="flex cursor-pointer flex-col items-center gap-3">
+                <FiUpload className="h-10 w-10 text-gray-400" />
+                <div>
+                  <p className="font-medium text-gray-900">
+                    {paymentProof ? 'Replace payment screenshot' : 'Upload payment screenshot'}
+                  </p>
+                  <p className="text-xs text-gray-600">PNG or JPG, up to 5MB</p>
+                </div>
+                <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+              </label>
 
-            {paymentProof && (
-              <img
-                src={paymentProof}
-                alt="Payment proof preview"
-                className="mx-auto mt-4 max-h-56 rounded-lg border border-gray-200 object-contain"
-              />
-            )}
-            {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
-          </div>
+              {paymentProof && (
+                <img
+                  src={paymentProof}
+                  alt="Payment proof preview"
+                  className="mx-auto mt-4 max-h-40 w-full max-w-xs rounded-lg border border-gray-200 object-contain"
+                />
+              )}
+              {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+            </div>
 
-          <div className="flex gap-3">
-            <button
-              onClick={onClose}
-              disabled={submitting}
-              className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-gray-300 py-3 font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
-            >
-              <FiArrowLeft className="h-4 w-4" />
-              Back
-            </button>
-            <button
-              onClick={() => onSubmit(paymentProof)}
-              disabled={!paymentProof || submitting}
-              className="flex-1 rounded-lg bg-primary-600 py-3 font-semibold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {submitting ? 'Submitting...' : 'Submit Payment Proof'}
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={onClose}
+                disabled={submitting}
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-gray-300 py-3 font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+              >
+                <FiArrowLeft className="h-4 w-4" />
+                Back
+              </button>
+              <button
+                onClick={() => onSubmit(paymentProof)}
+                disabled={!paymentProof || submitting}
+                className="flex-1 rounded-lg bg-primary-600 py-3 font-semibold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {submitting ? 'Submitting...' : 'Submit Payment Proof'}
+              </button>
+            </div>
           </div>
         </div>
       </div>

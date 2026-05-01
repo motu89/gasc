@@ -126,10 +126,17 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const vendorId = searchParams.get('vendorId');
+    const userId = searchParams.get('userId');
 
     await connectToDatabase();
 
-    const query = vendorId ? { vendorId } : {};
+    let query = {};
+    if (vendorId) {
+      query = { vendorId };
+    } else if (userId) {
+      query = { userId };
+    }
+
     const orders = await OrderModel.find(query).sort({ createdAt: -1 });
 
     return NextResponse.json({
