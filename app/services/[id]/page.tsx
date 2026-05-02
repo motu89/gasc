@@ -31,6 +31,7 @@ export default function ServiceDetailPage() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('cod')
   const [address, setAddress] = useState('')
   const [showManualPaymentModal, setShowManualPaymentModal] = useState(false)
+  const [minTime, setMinTime] = useState<string>('')
 
   useEffect(() => {
     const updateTime = () => {
@@ -80,6 +81,49 @@ export default function ServiceDetailPage() {
       router.push('/services')
     }
   }, [hydrated, router, service, user])
+
+  // Calculate minimum selectable time when date changes
+  useEffect(() => {
+    if (!selectedDate) {
+      setMinTime('')
+      return
+    }
+
+    const now = new Date()
+    const pakistanTimeString = now.toLocaleString('en-US', { timeZone: 'Asia/Karachi' })
+    const pakistanNow = new Date(pakistanTimeString)
+    
+    // Get the selected date in Pakistan time
+    const selectedDateStr = selectedDate.toLocaleDateString('en-US', {
+      timeZone: 'Asia/Karachi',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    })
+    
+    const todayStr = pakistanNow.toLocaleDateString('en-US', {
+      timeZone: 'Asia/Karachi',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    })
+
+    // If selected date is today, set min time to 2 hours from now
+    if (selectedDateStr === todayStr) {
+      const minTimeDate = new Date(pakistanNow.getTime() + 2 * 3600000) // +2 hours
+      const hours = minTimeDate.getHours().toString().padStart(2, '0')
+      const minutes = minTimeDate.getMinutes().toString().padStart(2, '0')
+      setMinTime(`${hours}:${minutes}`)
+    } else {
+      // For future dates, allow all times from 00:00
+      setMinTime('00:00')
+    }
+
+    // Clear selected time if it's before the new minimum
+    if (selectedTime && selectedTime < minTime) {
+      setSelectedTime('')
+    }
+  }, [selectedDate, minTime, selectedTime])
 
   useEffect(() => {
     if (user?.address) {
@@ -321,10 +365,23 @@ export default function ServiceDetailPage() {
                     <input
                       type="time"
                       value={selectedTime}
-                      onChange={(event) => setSelectedTime(event.target.value)}
+                      onChange={(event) => {
+                        const newTime = event.target.value;
+                        if (minTime && newTime < minTime) {
+                          toast.error(`This time is not selectable. Please select a time after ${minTime} (at least 2 hours from now).`);
+                          return;
+                        }
+                        setSelectedTime(newTime);
+                      }}
+                      min={minTime}
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900"
                       required
                     />
+                    {minTime && (
+                      <p className="mt-1 text-xs text-gray-500">
+                        Earliest available time: {minTime} (at least 2 hours from now)
+                      </p>
+                    )}
                   </div>
                 )}
 

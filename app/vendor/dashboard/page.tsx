@@ -38,6 +38,7 @@ export default function VendorDashboard() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [showOrderDetails, setShowOrderDetails] = useState(false)
   const [confirmingOrder, setConfirmingOrder] = useState(false)
+  const [cancellingOrder, setCancellingOrder] = useState(false)
 
   const loadProducts = async () => {
     if (!user) return
@@ -142,6 +143,28 @@ export default function VendorDashboard() {
       toast.error(error instanceof Error ? error.message : 'Unable to confirm order.')
     } finally {
       setConfirmingOrder(false)
+    }
+  }
+
+  const handleCancelOrder = async (orderId: string) => {
+    if (!confirm('Are you sure you want to cancel this order? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      setCancellingOrder(true)
+      await apiRequest('/api/vendor/orders/cancel', {
+        method: 'PATCH',
+        body: JSON.stringify({ orderId, vendorId: user.id }),
+      })
+      toast.success('Order cancelled successfully.')
+      setShowOrderDetails(false)
+      setSelectedOrder(null)
+      await loadProducts()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to cancel order.')
+    } finally {
+      setCancellingOrder(false)
     }
   }
 
@@ -472,17 +495,31 @@ export default function VendorDashboard() {
               )}
 
               {selectedOrder.status === 'pending' && (
-                <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-                  <p className="mb-3 text-sm font-medium text-green-800">
-                    Confirm the order when you are ready to proceed with fulfillment.
-                  </p>
-                  <button
-                    onClick={() => handleConfirmOrder(selectedOrder.id)}
-                    disabled={confirmingOrder}
-                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 py-3 font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {confirmingOrder ? 'Confirming...' : 'Confirm Order'}
-                  </button>
+                <div className="space-y-3">
+                  <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+                    <p className="mb-3 text-sm font-medium text-green-800">
+                      Confirm the order when you are ready to proceed with fulfillment.
+                    </p>
+                    <button
+                      onClick={() => handleConfirmOrder(selectedOrder.id)}
+                      disabled={confirmingOrder}
+                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 py-3 font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {confirmingOrder ? 'Confirming...' : 'Confirm Order'}
+                    </button>
+                  </div>
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                    <p className="mb-3 text-sm font-medium text-red-800">
+                      Cancel this order if you cannot fulfill it.
+                    </p>
+                    <button
+                      onClick={() => handleCancelOrder(selectedOrder.id)}
+                      disabled={cancellingOrder}
+                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-red-600 py-3 font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {cancellingOrder ? 'Cancelling...' : 'Cancel Order'}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

@@ -34,6 +34,7 @@ export default function ProviderDashboard() {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [showBookingDetails, setShowBookingDetails] = useState(false)
   const [confirmingBooking, setConfirmingBooking] = useState(false)
+  const [cancellingBooking, setCancellingBooking] = useState(false)
 
   const loadDashboard = async () => {
     if (!user) return
@@ -135,6 +136,28 @@ export default function ProviderDashboard() {
       toast.error(error instanceof Error ? error.message : 'Unable to confirm booking.')
     } finally {
       setConfirmingBooking(false)
+    }
+  }
+
+  const handleCancelBooking = async (bookingId: string) => {
+    if (!confirm('Are you sure you want to cancel this booking? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      setCancellingBooking(true)
+      await apiRequest('/api/provider/bookings/cancel', {
+        method: 'PATCH',
+        body: JSON.stringify({ bookingId, providerId: user.id }),
+      })
+      toast.success('Booking cancelled successfully.')
+      setShowBookingDetails(false)
+      setSelectedBooking(null)
+      await loadDashboard()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to cancel booking.')
+    } finally {
+      setCancellingBooking(false)
     }
   }
 
@@ -416,27 +439,61 @@ export default function ProviderDashboard() {
               )}
 
               {selectedBooking.status === 'pending' ? (
-                <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-                  <p className="mb-3 text-sm font-medium text-green-800">
-                    Confirm the booking when you are ready to proceed.
-                  </p>
-                  <button
-                    onClick={() => handleConfirmBooking(selectedBooking.id)}
-                    disabled={confirmingBooking}
-                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 py-3 font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {confirmingBooking ? 'Confirming...' : 'Confirm Booking'}
-                  </button>
+                <div className="space-y-3">
+                  <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+                    <p className="mb-3 text-sm font-medium text-green-800">
+                      Confirm the booking when you are ready to proceed.
+                    </p>
+                    <button
+                      onClick={() => handleConfirmBooking(selectedBooking.id)}
+                      disabled={confirmingBooking}
+                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 py-3 font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {confirmingBooking ? 'Confirming...' : 'Confirm Booking'}
+                    </button>
+                  </div>
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                    <p className="mb-3 text-sm font-medium text-red-800">
+                      Cancel this booking if you cannot accommodate it.
+                    </p>
+                    <button
+                      onClick={() => handleCancelBooking(selectedBooking.id)}
+                      disabled={cancellingBooking}
+                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-red-600 py-3 font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {cancellingBooking ? 'Cancelling...' : 'Cancel Booking'}
+                    </button>
+                  </div>
+                </div>
+              ) : selectedBooking.status === 'confirmed' ? (
+                <div className="space-y-3">
+                  <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-center">
+                    <p className="text-sm font-semibold text-green-800">
+                      Booking is Confirmed
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                    <p className="mb-3 text-sm font-medium text-red-800">
+                      Need to cancel this confirmed booking?
+                    </p>
+                    <button
+                      onClick={() => handleCancelBooking(selectedBooking.id)}
+                      disabled={cancellingBooking}
+                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-red-600 py-3 font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {cancellingBooking ? 'Cancelling...' : 'Cancel Booking'}
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className={`rounded-lg border p-4 text-center ${
-                  selectedBooking.status === 'confirmed' ? 'border-green-200 bg-green-50'
-                  : selectedBooking.status === 'completed' ? 'border-blue-200 bg-blue-50'
+                  selectedBooking.status === 'completed' ? 'border-blue-200 bg-blue-50'
+                  : selectedBooking.status === 'cancelled' ? 'border-red-200 bg-red-50'
                   : 'border-gray-200 bg-gray-50'
                 }`}>
                   <p className={`text-sm font-semibold ${
-                    selectedBooking.status === 'confirmed' ? 'text-green-800'
-                    : selectedBooking.status === 'completed' ? 'text-blue-800'
+                    selectedBooking.status === 'completed' ? 'text-blue-800'
+                    : selectedBooking.status === 'cancelled' ? 'text-red-800'
                     : 'text-gray-700'
                   }`}>
                     Booking is {selectedBooking.status.charAt(0).toUpperCase() + selectedBooking.status.slice(1)}
