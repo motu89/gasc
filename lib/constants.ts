@@ -1,6 +1,8 @@
 import { ProductCategory, ProductType, UserRole } from '@/types';
 
-export const APP_NAME = 'General Accessories';
+export const APP_NAME = 'Nexora';
+
+export const APP_TAGLINE = 'Smart Deals. Easy Living.';
 
 export const PRODUCT_TYPES: ProductType[] = ['rent', 'sale'];
 
@@ -32,7 +34,7 @@ export const MAX_IMAGE_UPLOADS = 2;
 export const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024;
 
 export const PRODUCT_CATEGORY_LABELS: Record<ProductCategory, string> = {
-  electronics: 'Electronics',
+  electronics: 'Mobile/Laptop',
   home_appliances: 'Home Appliances',
   machinery: 'Machinery',
   furniture: 'Furniture',

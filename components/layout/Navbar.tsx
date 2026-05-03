@@ -27,7 +27,7 @@ export default function Navbar() {
         <div className="flex h-16 items-center justify-between">
           <Link href="/" className="flex items-center space-x-3 group">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 shadow-lg transition-all group-hover:scale-105 group-hover:shadow-xl">
-              <span className="text-lg font-bold text-white">GA</span>
+              <span className="text-lg font-bold text-white">NA</span>
             </div>
             <span className="bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-xl font-bold text-transparent transition-all group-hover:from-primary-700 group-hover:to-primary-600">
               {APP_NAME}

@@ -6,12 +6,12 @@ import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import AppInitializer from '@/components/AppInitializer'
 import ConditionalLayout from '@/components/layout/ConditionalLayout'
-import { APP_NAME } from '@/lib/constants'
+import { APP_NAME, APP_TAGLINE } from '@/lib/constants'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: `${APP_NAME} - Rent, Buy & Book Services`,
+  title: `${APP_NAME} - ${APP_TAGLINE}`,
   description: 'A multi-functional marketplace for renting, selling, and service booking',
 }
 

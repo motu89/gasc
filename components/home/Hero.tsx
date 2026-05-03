@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { FiSearch, FiShoppingBag, FiTool, FiCalendar } from 'react-icons/fi'
+import { APP_TAGLINE } from '@/lib/constants'
 
 export default function Hero() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
@@ -55,8 +56,8 @@ export default function Hero() {
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 md:py-24 h-full flex flex-col items-center justify-center">
         <div className="text-center text-white w-full">
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 drop-shadow-lg leading-tight">
-            Rent, Buy & Book Services
-            <span className="block text-primary-200 mt-2">All in One Place</span>
+            {APP_TAGLINE}
+            <span className="block text-primary-200 mt-2">Rent, Buy & Book Services</span>
           </h1>
           <p className="text-base sm:text-lg md:text-xl mb-6 sm:mb-8 text-white/90 drop-shadow-md">
             Discover products for rent, sale, or installment. Book skilled professionals for your needs.

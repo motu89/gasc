@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { FiFacebook, FiInstagram, FiLinkedin, FiTwitter } from 'react-icons/fi'
-import { APP_NAME } from '@/lib/constants'
+import { APP_NAME, APP_TAGLINE } from '@/lib/constants'
 
 export default function Footer() {
   return (
@@ -10,7 +10,7 @@ export default function Footer() {
           <div className="text-center sm:text-left">
             <h3 className="mb-3 sm:mb-4 text-lg sm:text-xl font-bold">{APP_NAME}</h3>
             <p className="text-sm sm:text-base text-gray-400">
-              Rent products, buy essential items, and book trusted local services from one marketplace.
+              {APP_TAGLINE}
             </p>
           </div>
           <div className="text-center sm:text-left">

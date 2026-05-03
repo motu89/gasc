@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { FiBox, FiHome, FiMonitor, FiSettings, FiTruck } from 'react-icons/fi'
 
 const categories = [
-  { name: 'Electronics', icon: FiMonitor, href: '/products?category=electronics' },
+  { name: 'Mobile/Laptop', icon: FiMonitor, href: '/products?category=electronics' },
   { name: 'Home Appliances', icon: FiHome, href: '/products?category=home_appliances' },
   { name: 'Machinery', icon: FiSettings, href: '/products?category=machinery' },
   { name: 'Vehicles', icon: FiTruck, href: '/products?category=vehicles' },
